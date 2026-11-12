@@ -10,14 +10,16 @@ Priorité : **J** = nécessaire le jour de l'événement ; **A** = utilisée apr
 
 ## Semaine 1 – Socle
 
+Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit précèdent les référentiels, qui en ont besoin.
+
 | # | Tâche | Références | Prio |
 |---|---|---|---|
 | T-00 (JD-8) | Installer les outils et paquets du socle (voir `tasks/CURRENT_TASK.md`) | ARCHITECTURE 1, 10 | J |
-| T-02 (JD-9) | Référentiels : campus, filières, promotions, classes, secteurs, opportunités, étiquettes | ADM-09 | J |
 | T-03 (JD-10) | Rôles et permissions (seeder versionné) + test de chaque cellule de la matrice | CDC 3.2, 3.3 | J |
 | T-04 (JD-11) | Connexion, déconnexion, accueil par rôle, limitation des tentatives, session 12 h | AUTH-01, RG-AUTH-01 à 05 | J |
-| T-05 (JD-12) | Activation, oubli et changement du mot de passe | AUTH-02, AUTH-03 | J |
 | T-06 (JD-13) | Journal d'audit (service + table en ajout seul) | TRA-01 | J |
+| T-02 (JD-9) | Référentiels : campus, filières, promotions, classes, secteurs, opportunités, étiquettes | ADM-09 | J |
+| T-05 (JD-12) | Activation, oubli et changement du mot de passe | AUTH-02, AUTH-03 | J |
 
 ## Semaine 2 – Préparer l'événement (US-01)
 
