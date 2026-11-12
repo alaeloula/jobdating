@@ -44,3 +44,10 @@ Revue du socle par rapport au CDC V2 et à l'architecture, puis corrections sans
 - `.env` local aligné sur `.env.example` pour ces mêmes clés (fuseau, locale, sessions, file, cache).
 
 Non exécuté : aucun contrôle n'a été relancé après ces corrections (PHP et réseau indisponibles dans l'environnement de revue). À faire avec T-00 : `composer update --lock`, installation des paquets, puis tous les contrôles. Points d'attention : la vérification TypeScript stricte peut faire apparaître des erreurs ; `php artisan test` exige désormais la base `jobdating_test`.
+
+## 2026-11-12 — Dépôt GitHub et Docker de développement
+
+- Dépôt `alaeloula/jobdating` : branches `main` et `develop` protégées (pull request obligatoire, discussions résolues, approbations annulées si nouveau commit, pas de push direct, de force push ni de suppression, administrateurs inclus). Branche par défaut : `develop`. La règle « CI verte obligatoire » sera ajoutée après la première exécution de la CI.
+- Branche locale `feature/T-00-socle` créée.
+- `docker-compose.yml` : MySQL 8.0 (port 3307, bases `jobdating` et `jobdating_test`) et Mailpit (SMTP 1025, interface 8025). `.env.example`, `.env` local et `phpunit.xml` alignés. Dans la CI, les variables du job (MySQL sur 3306, utilisateur root) restent prioritaires.
+- Non exécuté : `docker compose up` et les contrôles restent à lancer sur le poste (T-00).

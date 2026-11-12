@@ -1,0 +1,41 @@
+# Services de développement local uniquement (option B, docs/DECISIONS.md).
+# Laravel tourne avec Herd (PHP 8.4) ; Docker fournit MySQL 8 et Mailpit.
+# Démarrer : docker compose up -d   ·   Arrêter : docker compose down
+# Ne pas utiliser en production : les identifiants ci-dessous sont des valeurs locales.
+
+name: jobdating
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: jobdating
+      MYSQL_USER: jobdating
+      MYSQL_PASSWORD: jobdating
+      TZ: Africa/Casablanca
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      # 3307 côté poste pour ne pas entrer en conflit avec un MySQL déjà installé.
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP utilisé par Laravel
+      - "8025:8025"   # Interface web : http://localhost:8025
+
+volumes:
+  mysql-data:
