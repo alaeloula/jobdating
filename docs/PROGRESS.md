@@ -66,3 +66,12 @@ Hors périmètre, à traiter dans les tâches concernées :
 - APP-02 (l'apprenant consulte ses passages) : pas de ligne dans la matrice ; règle « ses propres passages, sans évaluation ni commentaire » dans la policy de T-40 (PC-04, PC-12). Validé par le responsable technique.
 
 Vérification : syntaxe PHP contrôlée localement ; tests, Pint et Larastan exécutés par la CI de la pull request.
+
+### Corrections après la revue indépendante (Codex, PR #3)
+
+Trois constats majeurs confirmés, tous corrigés :
+1. Plusieurs rôles attribuables à un compte non enregistré (Spatie diffère l'insertion) : attribution refusée tant que le compte n'est pas enregistré.
+2. Contrôle du rôle unique non atomique : contrainte d'unicité `(model_id, model_type)` sur `model_has_roles` (garantie en base, y compris en concurrence) ; contrôles applicatifs dans une transaction avec verrou sur la ligne utilisateur.
+3. `syncRoles()` refusé supprimait le rôle actuel : nombre de rôles vérifié avant tout retrait, remplacement dans une transaction.
+
+Tests de régression ajoutés pour chacun des trois cas.

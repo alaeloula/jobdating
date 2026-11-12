@@ -7,7 +7,9 @@ use App\Enums\Role;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use LogicException;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -74,6 +76,71 @@ class SingleRoleTest extends TestCase
         $user->assignRole(Role::Apprenant->value);
 
         $this->assertCount(1, $user->refresh()->roles);
+    }
+
+    public function test_un_role_refuse_sur_un_compte_non_enregistre_avec_set_role(): void
+    {
+        $user = User::factory()->make();
+
+        $this->expectException(LogicException::class);
+
+        $user->setRole(Role::Cme);
+    }
+
+    public function test_un_role_refuse_sur_un_compte_non_enregistre_avec_assign_role(): void
+    {
+        $user = User::factory()->make();
+
+        $this->expectException(LogicException::class);
+
+        $user->assignRole(Role::Cme->value);
+    }
+
+    public function test_aucun_role_accumule_avant_enregistrement(): void
+    {
+        $user = User::factory()->make();
+
+        foreach ([Role::Cme, Role::Administrateur] as $role) {
+            try {
+                $user->setRole($role);
+            } catch (LogicException) {
+                // Refus attendu : le compte n'est pas enregistré.
+            }
+        }
+
+        $user->save();
+
+        $this->assertSame([], $user->refresh()->getRoleNames()->all());
+    }
+
+    public function test_un_sync_roles_refuse_conserve_le_role_actuel(): void
+    {
+        $user = User::factory()->create();
+        $user->setRole(Role::Entreprise);
+
+        try {
+            $user->syncRoles([Role::Cme->value, Role::Direction->value]);
+            $this->fail('syncRoles avec deux rôles aurait dû être refusé.');
+        } catch (LogicException) {
+            // Refus attendu.
+        }
+
+        $this->assertSame(Role::Entreprise, $user->refresh()->currentRole());
+    }
+
+    public function test_la_base_refuse_un_second_role_meme_hors_application(): void
+    {
+        $user = User::factory()->create();
+        $user->setRole(Role::Entreprise);
+
+        $this->expectException(QueryException::class);
+
+        // Simule une écriture concurrente qui contournerait les contrôles de l'application.
+        DB::table('model_has_roles')->insert([
+            'role_id' => RoleModel::findByName(Role::Administrateur->value, 'web')->getKey(),
+            'model_type' => $user->getMorphClass(),
+            'model_id' => $user->getKey(),
+        ]);
     }
 
     public function test_le_seeder_peut_etre_relance_sans_doublon(): void

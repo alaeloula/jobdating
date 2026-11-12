@@ -8,6 +8,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use LogicException;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -16,7 +17,10 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable {
         HasRoles::assignRole as private attachRoles;
+        HasRoles::syncRoles as private replaceRoles;
     }
+
+    private const SINGLE_ROLE_MESSAGE = 'Un compte a un seul rôle (RG-ACC-06) : utiliser setRole().';
 
     /**
      * The attributes that are mass assignable.
@@ -71,22 +75,71 @@ class User extends Authenticatable
     }
 
     /**
+     * Remplace les rôles du compte (RG-ACC-06).
+     *
+     * Le nombre de rôles demandés est vérifié avant de retirer le rôle actuel :
+     * une demande refusée laisse le compte inchangé.
+     *
+     * @param  mixed  ...$roles
+     */
+    public function syncRoles(...$roles): static
+    {
+        $this->ensurePersistedForRoles();
+
+        if (count($this->collectRoles($roles)) > 1) {
+            throw new LogicException(self::SINGLE_ROLE_MESSAGE);
+        }
+
+        return DB::transaction(function () use ($roles): static {
+            $this->lockForRoleChange();
+
+            return $this->replaceRoles(...$roles);
+        });
+    }
+
+    /**
      * Ajout de rôle limité à un seul rôle par compte (RG-ACC-06).
      *
-     * Utiliser setRole() pour changer de rôle. syncRoles() reste possible :
-     * il retire les rôles existants avant d'appeler cette méthode.
+     * Utiliser setRole() pour changer de rôle. La contrainte d'unicité de la table
+     * model_has_roles garantit la règle même en cas d'opérations concurrentes.
      *
      * @param  mixed  ...$roles
      */
     public function assignRole(...$roles): static
     {
+        $this->ensurePersistedForRoles();
+
         $requested = $this->collectRoles($roles);
-        $current = $this->exists ? $this->roles()->pluck('id')->all() : [];
 
-        if (count(array_unique(array_merge($current, $requested))) > 1) {
-            throw new LogicException('Un compte a un seul rôle (RG-ACC-06) : utiliser setRole().');
+        return DB::transaction(function () use ($roles, $requested): static {
+            $this->lockForRoleChange();
+
+            $current = $this->roles()->pluck('id')->all();
+
+            if (count(array_unique(array_merge($current, $requested))) > 1) {
+                throw new LogicException(self::SINGLE_ROLE_MESSAGE);
+            }
+
+            return $this->attachRoles(...$roles);
+        });
+    }
+
+    /**
+     * Un rôle ne s'attribue qu'à un compte enregistré : sinon Spatie diffère
+     * l'insertion et plusieurs rôles pourraient s'accumuler avant l'enregistrement.
+     */
+    private function ensurePersistedForRoles(): void
+    {
+        if (! $this->exists) {
+            throw new LogicException('Enregistrer le compte avant de lui attribuer un rôle (RG-ACC-06).');
         }
+    }
 
-        return $this->attachRoles(...$roles);
+    /**
+     * Sérialise les changements de rôle d'un même compte.
+     */
+    private function lockForRoleChange(): void
+    {
+        static::query()->whereKey($this->getKey())->lockForUpdate()->first();
     }
 }
