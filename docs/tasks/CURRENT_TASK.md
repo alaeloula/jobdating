@@ -4,9 +4,15 @@ Ces commandes demandent PHP, Composer et le réseau : elles sont à exécuter su
 
 ## 1. Prérequis
 
-- PHP **8.4** pour ce projet (Herd : sélectionner PHP 8.4 pour le dossier), MySQL 8 démarré.
-- Créer deux bases : `jobdating` et `jobdating_test`.
-- Renseigner `DB_USERNAME` et `DB_PASSWORD` dans `backend/.env` (et dans `phpunit.xml` si différents de `root` / vide).
+- PHP **8.4** pour ce projet (Herd : sélectionner PHP 8.4 pour le dossier).
+- Docker Desktop démarré, puis depuis la racine :
+
+```powershell
+docker compose up -d
+docker compose ps        # mysql doit être « healthy »
+```
+
+MySQL 8 écoute sur le port **3307** avec les bases `jobdating` et `jobdating_test` (utilisateur `jobdating`, valeurs de développement déjà dans `.env.example` et `phpunit.xml`). Mailpit affiche les e-mails envoyés sur http://localhost:8025.
 
 ## 2. Backend (depuis `backend/`)
 
@@ -48,7 +54,7 @@ npm.cmd run test
 npm.cmd audit --audit-level=high
 ```
 
-## 5. Intégration continue
+## 5. Intégration continue (même branche `feature/T-00-socle`)
 
 Déplacer `docs/ci.yml` vers `.github/workflows/ci.yml` (dossier protégé : à faire sur le poste).
 
@@ -57,14 +63,14 @@ New-Item -ItemType Directory -Force .github/workflows
 Move-Item docs/ci.yml .github/workflows/ci.yml
 ```
 
-## 6. Git
+## 6. Git (branche `feature/T-00-socle` déjà créée)
 
 ```powershell
-git init
 git add .
-git commit -m "Socle technique JobDating"
+git commit -m "T-00 : outils du socle, Docker de développement et pipeline CI"
+git push -u origin feature/T-00-socle
 ```
 
-Vérifier avant le commit que `git status` ne liste ni `.env`, ni `vendor/`, ni `node_modules/`, ni `dist/`.
+Vérifier avant le commit que `git status` ne liste ni `.env`, ni `vendor/`, ni `node_modules/`, ni `dist/`. Ouvrir ensuite la pull request vers `develop` : la CI se lance automatiquement.
 
 Statut : à faire.
