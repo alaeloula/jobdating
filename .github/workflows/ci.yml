@@ -1,8 +1,16 @@
 name: CI
 
 on:
+  # Une seule exécution par changement : sur chaque pull request,
+  # et sur main / develop après une fusion.
   push:
+    branches: [main, develop]
   pull_request:
+
+# Annule une exécution devenue inutile quand un nouveau commit arrive sur la même branche.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
