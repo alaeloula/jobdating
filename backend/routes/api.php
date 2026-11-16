@@ -3,6 +3,8 @@
 // API JobDating. Préfixe : /api/v1 (bootstrap/app.php).
 // Authentification : session par cookie Sanctum + CSRF, sans jeton (CDC 9.5).
 
+use App\Enums\Permission;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\MeController;
@@ -15,4 +17,10 @@ Route::post('/login', LoginController::class)
 Route::middleware(['auth:sanctum', 'session.valid'])->group(function () {
     Route::post('/logout', LogoutController::class)->name('auth.logout');
     Route::get('/me', MeController::class)->name('auth.me');
+
+    // Journal d'audit (TRA-01) : administrateur uniquement (CDC 3.2).
+    Route::middleware('permission:'.Permission::AuditView->value)->group(function () {
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+        Route::get('/audit-logs/filters', [AuditLogController::class, 'filters'])->name('audit-logs.filters');
+    });
 });

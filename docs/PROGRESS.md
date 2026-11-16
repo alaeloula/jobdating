@@ -137,3 +137,36 @@ Sessions parallèles d'un compte entreprise (PC-05) : règle confirmée par le r
 Reportés, à traiter dans les tâches concernées :
 - T-01 (mise en ligne) : proxies de confiance et en-têtes transmis, pour que `$request->ip()` (limiteur) désigne bien le client ; HTTPS, cookies `Secure`, `SANCTUM_STATEFUL_DOMAINS` de production ;
 - T-10, T-12 (désactivation par l'administrateur) : supprimer toutes les sessions du compte (table `sessions`), pour qu'une session restée inactive pendant la désactivation ne revienne pas après une réactivation.
+
+## 2026-11-16 — T-06 (JD-13) : journal d'audit
+
+Choix du responsable technique (détail dans `DECISIONS.md`) : écran de consultation inclus (export reporté à T-61) ; connexions journalisées, réussies et refusées ; protection dans le code et dans MySQL ; purge limitée au journal d'audit.
+
+Réalisé :
+- migration `audit_logs` (sans clé étrangère vers `users`, pour qu'une suppression de compte ne modifie jamais le journal ; libellés de l'auteur et de l'élément recopiés) et deux déclencheurs MySQL (aucune modification ; suppression seulement au-delà d'un an, tolérance d'un jour pour le fuseau) ;
+- `AuditAction`, `AuditCategory`, modèle `AuditLog` (création seule), service `AuditLogger` (secrets exclus, CNIE masquée) ;
+- branchements : observateur `UserAuditObserver` (création, modification, désactivation, réactivation, suppression, restauration ; la date de dernière connexion n'est pas journalisée comme modification ; un changement de mot de passe est noté « modifié » sans valeur), `User::syncRoles()` / `assignRole()` (changement de rôle, dans la même transaction), connexion (réussite, refus avec motif), blocage 429 (une fois par blocage), déconnexion ;
+- commande `audit:purge`, planifiée chaque jour à 3 h ;
+- API `GET /api/v1/audit-logs` (filtres catégorie, auteur, période, élément ; pagination bornée) et `GET /api/v1/audit-logs/filters`, permission `audit.view` ;
+- frontend : écran « Journal d'audit » (catégories, auteur, période, tableau, détail avant / après, pagination), lien « Journal d'audit » dans l'en-tête pour l'administrateur ;
+- `docker-compose.yml` : option `--log-bin-trust-function-creators=1` (sinon erreur 1419 à la création des déclencheurs, l'utilisateur `jobdating` n'ayant pas le droit SUPER et la journalisation binaire étant active). Conteneur relancé le 16/11, données conservées.
+
+Points d'attention :
+- production (T-01) : même option MySQL, ou création des déclencheurs par un compte administrateur ; planificateur Laravel à lancer (`schedule:run` chaque minute) pour la purge ;
+- chaque création de compte et attribution de rôle écrit désormais dans le journal, y compris dans les tests et les seeders (auteur « système » = vide).
+
+### Corrections après la revue indépendante (Codex, `docs/reviews/REVIEW-T-06-journal-audit.md`, 16/11)
+
+Verdict : « À corriger avant fusion ». Constats analysés avec le responsable technique :
+1. Variantes de noms de mot de passe non filtrées : filtre étendu (`pwd`, `passwd`, `mot de passe`, `mdp`, `pass`, `api key`, `secret`, `token`, `credential`), nom de clé normalisé (casse, accents, séparateurs), à toute profondeur ; la mention de changement de mot de passe devient une note (`note : Mot de passe modifié`). Corrigé.
+2. CNIE non textuelle non masquée : **non corrigé, par décision du responsable technique** (masquage conservé pour le texte seulement).
+3. Blocage global par IP journalisé une fois par identifiant : chaque limite a sa clé de déduplication (compte + IP, ou IP seule) ; champ `limite` ajouté. Corrigé.
+4. Tolérance d'un jour du déclencheur : seuil exact d'un an ; la purge applicative attend un an et un jour. Corrigé (base de développement : migration du journal rejouée le 16/11).
+
+Décisions prises à cette occasion : refus de connexion journalisés seulement pour un compte existant ; auteur « Système » hors requête web (pas d'adresse IP dans ce cas).
+
+Tests de régression ajoutés : variantes de mot de passe, seuil exact et purge, blocage global avec plusieurs identifiants, identifiant inconnu non journalisé, auteur « Système ».
+
+Points notés pour la suite :
+- T-01 : compte MySQL de l'application distinct du compte des migrations, sans droit DROP (TRUNCATE contourne les déclencheurs) ; ne jamais annuler la migration du journal en production (`down()` supprime le journal) ;
+- T-10 à T-13 et suivantes : les écritures silencieuses (`saveQuietly`) et les mises à jour de masse (`query()->update()`) ne passent pas par l'observateur ; les journaliser explicitement avec `AuditLogger`.
