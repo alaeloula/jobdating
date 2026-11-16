@@ -2,8 +2,9 @@ import { NavLink, Outlet, useLocation } from 'react-router'
 import { useLogout, useMe } from '../auth/queries'
 import type { FlashLocationState } from '../auth/types'
 
-/** Permission du journal d'audit (administrateur, CDC 3.2). */
+/** Permissions des liens de navigation (CDC 3.2). */
 const AUDIT_VIEW = 'audit.view'
+const REFERENTIALS_MANAGE = 'referentials.manage'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-lg px-3 py-2 font-medium ${isActive ? 'bg-white/20 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`
@@ -33,6 +34,11 @@ export default function AppLayout() {
                 <NavLink to={user.home} className={navClass} end>
                   Accueil
                 </NavLink>
+                {user.permissions.includes(REFERENTIALS_MANAGE) && (
+                  <NavLink to="/referentiels" className={navClass}>
+                    Référentiels
+                  </NavLink>
+                )}
                 {user.permissions.includes(AUDIT_VIEW) && (
                   <NavLink to="/journal-audit" className={navClass}>
                     Journal d’audit

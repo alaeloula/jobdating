@@ -18,7 +18,7 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 | T-03 (JD-10) | Rôles et permissions (seeder versionné) + test de chaque cellule de la matrice | CDC 3.2, 3.3 | J |
 | T-04 (JD-11) | Connexion, déconnexion, accueil par rôle, limitation des tentatives, session 12 h | AUTH-01, RG-AUTH-01 à 05 | J |
 | T-06 (JD-13) | Journal d'audit (service + table en ajout seul) | TRA-01 | J |
-| T-02 (JD-9) | Référentiels : campus, filières, promotions, classes, secteurs, opportunités, étiquettes | ADM-09 | J |
+| T-02 (JD-9) | Référentiels : campus, filières, promotions, classes, secteurs, opportunités, étiquettes, **compétences** (décision du 16/11) | ADM-09, DECISIONS 16/11 | J |
 | T-05 (JD-12) | Activation, oubli et changement du mot de passe | AUTH-02, AUTH-03 | J |
 
 ## Semaine 2 – Préparer l'événement (US-01)
@@ -26,8 +26,8 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 | # | Tâche | Références | Prio |
 |---|---|---|---|
 | T-10 (JD-15) | Gestion des utilisateurs (CME, Direction, administrateurs) | ADM-01 | J |
-| T-11 (JD-16) | Entreprises : création, nom d'utilisateur et mot de passe générés, fiche imprimable ; profils recherchés et bandeau d'avertissement, recruteurs enregistrés en consultation (V2) | ADM-02, RG-ENTR-08, DECISIONS 16/11 | J |
-| T-12 (JD-17) | Apprenants : fiche, modification, réinitialisation, désactivation en masse | ADM-03 | J |
+| T-11 (JD-16) | Entreprises : création, nom d'utilisateur et mot de passe générés, fiche imprimable ; profils recherchés (filières et **compétences**) et bandeau d'avertissement, recruteurs enregistrés en consultation (V2) | ADM-02, RG-ENTR-08, DECISIONS 16/11 | J |
+| T-12 (JD-17) | Apprenants : fiche, modification, réinitialisation, désactivation en masse ; **compétences des apprenants saisies par la CME et l'administrateur** (nouvelle permission ; saisie en masse à étudier, point ouvert COMP-01) | ADM-03, DECISIONS 16/11 | J |
 | T-13 (JD-18) | Import du fichier YouCode School Admin (aperçu, contrôles, rapport, fichier des mots de passe) | ADM-04, RG-IMP-01 à 07 | J |
 | T-14 (JD-19) | Événement courant, inscription automatique des participants, emplacements | ADM-05, ADM-07 | J |
 | T-15 (JD-20) | Programme de l'événement | ADM-08 | J |
@@ -57,7 +57,7 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 
 | # | Tâche | Références | Prio |
 |---|---|---|---|
-| T-40 (JD-32) | Espace apprenant : « Ma journée », programme, passages, état du CV ; suggestions d'entreprises (V2) | APP-00 à APP-03, RG-APP-01, RG-APP-02 | J |
+| T-40 (JD-32) | Espace apprenant : « Ma journée », programme, passages, état du CV ; suggestions d'entreprises par filière **ou compétence** (V2, décision du 16/11) | APP-00 à APP-03, RG-APP-01, RG-APP-02, DECISIONS 16/11 | J |
 | T-41 (JD-33) | Notifications internes et temps réel (Reverb) | NOTIF-01 | J |
 | T-42 (JD-34) | Alertes automatiques des apprenants sans rencontre | NOTIF-02, STAT-06 | J |
 | T-43 (JD-35) | Régularisation d'un passage par l'administrateur | ADM-10 | J |

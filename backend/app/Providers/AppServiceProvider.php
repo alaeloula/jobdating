@@ -2,9 +2,13 @@
 
 namespace App\Providers;
 
+use App\Contracts\ClassUsage;
+use App\Contracts\TagUsage;
 use App\Enums\AuditAction;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Referentials\NoClassUsage;
+use App\Services\Referentials\NoTagUsage;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +24,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Points d'extension des référentiels (T-02) : à remplacer par T-12 (apprenants d'une
+        // classe) et T-31 (étiquettes utilisées dans des évaluations).
+        $this->app->bind(ClassUsage::class, NoClassUsage::class);
+        $this->app->bind(TagUsage::class, NoTagUsage::class);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contracts\HasAuditLabel;
 use App\Enums\AuditAction;
 use App\Models\AuditLog;
 use App\Models\User;
@@ -58,7 +59,11 @@ class AuditLogger
             'category' => $action->category(),
             'subject_type' => $subject !== null ? Str::snake(class_basename($subject)) : null,
             'subject_id' => $subject?->getKey(),
-            'subject_label' => $subject instanceof User ? self::userLabel($subject) : null,
+            'subject_label' => match (true) {
+                $subject instanceof User => self::userLabel($subject),
+                $subject instanceof HasAuditLabel => mb_substr($subject->auditLabel(), 0, 255),
+                default => null,
+            },
             'old_values' => $old === [] ? null : $this->sanitize($old),
             'new_values' => $new === [] ? null : $this->sanitize($new),
             'ip' => $web ? request()->ip() : null,

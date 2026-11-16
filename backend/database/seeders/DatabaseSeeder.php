@@ -13,5 +13,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(RolesAndPermissionsSeeder::class);
+        // Opportunités et étiquettes validées (PC-23) ; aucune autre liste (décision du 16/11/2026).
+        $this->call(ReferentialsSeeder::class);
     }
 }

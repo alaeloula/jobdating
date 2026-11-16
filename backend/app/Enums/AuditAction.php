@@ -21,11 +21,20 @@ enum AuditAction: string
     case AccountRestored = 'account.restored';
     case RoleChanged = 'account.role_changed';
 
+    case ReferentialCreated = 'referential.created';
+    case ReferentialUpdated = 'referential.updated';
+    case ReferentialDeactivated = 'referential.deactivated';
+    case ReferentialReactivated = 'referential.reactivated';
+    case ReferentialReordered = 'referential.reordered';
+
     public function category(): AuditCategory
     {
         return match ($this) {
             self::LoginSucceeded, self::LoginFailed, self::LoginThrottled, self::Logout => AuditCategory::Connexions,
-            default => AuditCategory::Comptes,
+            self::AccountCreated, self::AccountUpdated, self::AccountDeactivated, self::AccountReactivated,
+            self::AccountDeleted, self::AccountRestored, self::RoleChanged => AuditCategory::Comptes,
+            self::ReferentialCreated, self::ReferentialUpdated, self::ReferentialDeactivated,
+            self::ReferentialReactivated, self::ReferentialReordered => AuditCategory::Referentiels,
         };
     }
 
@@ -43,6 +52,11 @@ enum AuditAction: string
             self::AccountDeleted => 'Compte supprimé',
             self::AccountRestored => 'Compte restauré',
             self::RoleChanged => 'Rôle modifié',
+            self::ReferentialCreated => 'Référentiel : valeur ajoutée',
+            self::ReferentialUpdated => 'Référentiel : valeur modifiée',
+            self::ReferentialDeactivated => 'Référentiel : valeur désactivée',
+            self::ReferentialReactivated => 'Référentiel : valeur réactivée',
+            self::ReferentialReordered => 'Référentiel : ordre modifié',
         };
     }
 }

@@ -14,6 +14,7 @@ enum AuditCategory: string
     case Cv = 'cv';
     case Cnie = 'cnie';
     case ImportsExports = 'imports_exports';
+    case Referentiels = 'referentiels';
 
     public function label(): string
     {
@@ -24,6 +25,7 @@ enum AuditCategory: string
             self::Cv => 'Consultations de CV',
             self::Cnie => 'Consultations de CNIE',
             self::ImportsExports => 'Imports et exports',
+            self::Referentiels => 'Référentiels',
         };
     }
 }
