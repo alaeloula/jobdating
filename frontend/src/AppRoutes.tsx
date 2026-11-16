@@ -4,6 +4,7 @@ import AppLayout from './layout/AppLayout'
 import AuditLogPage from './pages/AuditLogPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import ReferentialsPage from './pages/ReferentialsPage'
 
 /**
  * Routes de l'application. Chaque rôle a sa page d'accueil (AUTH-01) ;
@@ -31,6 +32,9 @@ export default function AppRoutes() {
             </Route>
             <Route element={<RequireAuth roles={['administrateur']} />}>
               <Route path="/journal-audit" element={<AuditLogPage />} />
+            </Route>
+            <Route element={<RequireAuth roles={['administrateur', 'cme']} />}>
+              <Route path="/referentiels" element={<ReferentialsPage />} />
             </Route>
             <Route element={<RequireAuth roles={['entreprise']} />}>
               <Route path="/entreprise" element={<HomePage title="Tableau de bord entreprise" />} />

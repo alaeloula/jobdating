@@ -170,3 +170,25 @@ Tests de régression ajoutés : variantes de mot de passe, seuil exact et purge,
 Points notés pour la suite :
 - T-01 : compte MySQL de l'application distinct du compte des migrations, sans droit DROP (TRUNCATE contourne les déclencheurs) ; ne jamais annuler la migration du journal en production (`down()` supprime le journal) ;
 - T-10 à T-13 et suivantes : les écritures silencieuses (`saveQuietly`) et les mises à jour de masse (`query()->update()`) ne passent pas par l'observateur ; les journaliser explicitement avec `AuditLogger`.
+
+## 2026-11-16 — T-02 (JD-9) : référentiels
+
+Préparation : plan rédigé à partir du CDC (ADM-09), revu deux fois par Codex (`docs/reviews/REVIEW-PLAN-T-02.md`, `REVIEW-PLAN-T-02-contre-revue.md`), version 3 validée par le responsable technique (option : derniers points intégrés sans troisième revue du plan, vérifiés par la revue du code). Décisions du 16/11 dans `DECISIONS.md` : compétences, secteurs, aucune suppression, filière d'une classe corrigible avec confirmation, type d'étiquette, code de filière définitif, journalisation, listes officielles saisies à l'écran.
+
+Réalisé :
+- migration des 8 tables (unicités, `active`, `position`, `seed_key`, clé classe → filière) ; modèles `App\Models\Referentials\*` ; énumérations `ReferentialType`, `EvaluationTagType` ;
+- `ReferentialService` : chaque écriture et sa ligne d'audit dans une transaction ; ligne verrouillée (`FOR UPDATE`) et contrôles d'utilisation refaits sous ce verrou ; points d'extension `ClassUsage` et `TagUsage` (implémentations provisoires : 0 apprenant, étiquette non utilisée) ;
+- `ReferentialController` et routes : `GET/POST /api/v1/referentials/{type}`, `PATCH /{type}/{id}`, `PUT /{type}/order` (`referentials.manage`), `GET /{type}/options` (tout connecté) ; aucune suppression ;
+- confirmation de filière : `confirmer_changement_filiere` strictement booléen (sinon 422) ; 409 `class_in_use` avec le nombre recalculé par le serveur ; aucun champ modifié ni journal en cas de refus ;
+- journal : catégorie « Référentiels » (7 catégories), actions explicites, libellé de la valeur (`HasAuditLabel`) ;
+- `ReferentialsSeeder` (appelé par `DatabaseSeeder`) : clés fixes, rattachement technique des homonymes sans clé, créations journalisées « Système », relance sans effet ;
+- frontend : écran « Référentiels » (8 onglets, ajout, modification, désactivation, ordre, étiquettes par type, code de filière en lecture seule, confirmation « N apprenants changeront de filière »), lien d'en-tête pour `referentials.manage` ; `ApiError.payload` pour lire `learners_count`.
+
+Points d'attention :
+- T-12 / T-13 / T-31 : brancher `ClassUsage` et `TagUsage` et prendre le même verrou de ligne lors des affectations ; écrire alors les tests de simultanéité sur MySQL ;
+- tests : le point d'extension est résolu à chaque contrôle (pas d'injection dans le constructeur), car Laravel réutilise le contrôleur entre les requêtes d'un même test.
+
+Revue du code par Codex (`docs/reviews/REVIEW-T-02-referentiels.md`, verdict « À fusionner après corrections mineures »), corrections :
+- constat 1 : une modification partielle d'étiquette (type seul) vers un libellé déjà présent dans l'autre groupe donnait une erreur 500 ; l'unicité porte maintenant sur le couple type + libellé **effectif** (le champ absent reprend sa valeur actuelle), d'où un 422 avec un message clair ;
+- constat 2 : `PUT /order` acceptait un objet JSON ; règle `list` sur `ids` (422) et positions comptées par le service, jamais tirées des clés reçues ;
+- tests ajoutés : régression des deux constats, échec du journal qui annule la modification et le réordonnancement, déplacement d'une valeur dans l'écran (↑ / ↓).

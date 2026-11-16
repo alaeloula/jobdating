@@ -1,30 +1,33 @@
-# Tâche courante – T-06 (JD-13) : journal d'audit
+# Tâche courante – T-02 (JD-9) : référentiels
 
-Branche : `feature/T-06-journal-audit`.
+Branche : `feature/T-02-referentiels`.
 
-Périmètre validé (16/11/2026) :
-- table `audit_logs` en ajout seul : auteur (et son libellé recopié), action, catégorie, élément concerné (et son libellé), valeurs avant et après, adresse IP, date ;
-- non modifiable : le modèle refuse modification et suppression ; des déclencheurs MySQL refusent toute modification et toute suppression de ligne de moins d'un an ;
-- service unique `App\Services\AuditLogger` : jamais de mot de passe, jeton ou secret ; CNIE masquée ;
-- événements branchés : création, modification, désactivation, réactivation, suppression et restauration de comptes ; changements de rôle ; connexions réussies et refusées (avec motif), blocages (une fois par blocage), déconnexions ;
-- purge : `php artisan audit:purge`, planifiée chaque jour à 3 h ; supprime uniquement les lignes du journal d'audit de plus d'un an ;
-- API `GET /api/v1/audit-logs` et `GET /api/v1/audit-logs/filters` (permission `audit.view`, administrateur) : filtres catégorie, auteur, période, élément (historique complet d'un élément) ; 50 lignes par page, 100 au plus ;
-- écran « Journal d'audit » (maquette `admin-13`) : filtres par catégorie, auteur et période, tableau, détail avant / après, pagination ; lien dans l'en-tête pour l'administrateur.
+Plan validé : `docs/tasks/PLAN-T-02.md` (version 3, après la revue et la contre-revue du plan par Codex).
 
-Hors périmètre : bouton « Exporter » (T-61) ; journalisation des passages, évaluations, CV, imports, exports (branchée dans leurs tâches avec `AuditLogger`) ; exécution du planificateur sur le serveur (T-01).
+Périmètre livré :
+- 8 référentiels : filières, classes, campus, promotions, secteurs, **compétences**, types d'opportunité, étiquettes d'évaluation (tables `filieres`, `classes`, `campuses`, `promotions`, `sectors`, `competences`, `opportunity_types`, `evaluation_tags_ref`) ;
+- gestion par l'administrateur et l'équipe CME (`referentials.manage`) : liste, ajout, modification, désactivation / réactivation, ordre (opportunités ; étiquettes par type) ; **aucune suppression** ;
+- lecture des options pour tout utilisateur connecté (actives ; `?inactives=1` avec leur état) ;
+- règles : code de filière définitif ; filière d'une classe utilisée modifiable **avec confirmation** (`confirmer_changement_filiere: true`, sinon 409 avec le nombre d'apprenants) ; type d'une étiquette utilisée non modifiable ; contrôles faits sous verrou de la ligne ;
+- journal d'audit : catégorie « Référentiels » ;
+- données initiales : opportunités (PC-23) et étiquettes (ENT-05) avec clés fixes ; autres listes vides ;
+- écran « Référentiels » (maquette `admin-12`) et lien dans l'en-tête.
 
-Prérequis local : conteneur MySQL relancé avec l'option `--log-bin-trust-function-creators=1` (`docker-compose.yml`), sinon la migration échoue (erreur 1419).
+Points d'extension à brancher obligatoirement :
+- **T-12** : `App\Contracts\ClassUsage` (nombre d'apprenants d'une classe), et verrou de la ligne de classe à la première affectation d'un apprenant (aussi T-13) ;
+- **T-31** : `App\Contracts\TagUsage` (étiquette utilisée), et verrou de la ligne d'étiquette à l'association avec une évaluation.
+
+Hors périmètre : utilisation des listes dans les formulaires et filtres (T-11, T-12, T-13, T-31, T-40) ; compétences recherchées (T-11) et compétences des apprenants (T-12) ; saisie en masse (COMP-01).
 
 Contrôles locaux (MySQL Docker démarré) :
 
 ```powershell
 # backend/
-docker compose up -d mysql      # depuis la racine, après la modification de docker-compose.yml
 vendor/bin/pint --test
 vendor/bin/phpstan analyse
 php artisan test
 php artisan migrate
-php artisan audit:purge
+php artisan db:seed --class=ReferentialsSeeder
 
 # frontend/
 npm.cmd run lint
@@ -32,4 +35,4 @@ npm.cmd run test
 npm.cmd run build
 ```
 
-Tâche suivante : T-02 (JD-9) – référentiels.
+Tâche suivante : T-05 (JD-12) – activation, oubli et changement du mot de passe.

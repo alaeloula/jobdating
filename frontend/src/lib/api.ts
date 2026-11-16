@@ -24,11 +24,18 @@ export class ApiError extends Error {
   readonly code: string | undefined
   readonly errors: Record<string, string[]>
   readonly retryAfter: number | undefined
+  /** Corps complet de la réponse d'erreur (champs propres à une route, ex. learners_count). */
+  readonly payload: Record<string, unknown>
 
   constructor(
     status: number,
     message: string,
-    options: { code?: string; errors?: Record<string, string[]>; retryAfter?: number } = {},
+    options: {
+      code?: string
+      errors?: Record<string, string[]>
+      retryAfter?: number
+      payload?: Record<string, unknown>
+    } = {},
   ) {
     super(message)
     this.name = 'ApiError'
@@ -36,6 +43,7 @@ export class ApiError extends Error {
     this.code = options.code
     this.errors = options.errors ?? {}
     this.retryAfter = options.retryAfter
+    this.payload = options.payload ?? {}
   }
 }
 
@@ -76,6 +84,7 @@ function toApiError(status: number, payload: ErrorPayload | null): ApiError {
     errors:
       payload?.errors && typeof payload.errors === 'object' ? (payload.errors as Record<string, string[]>) : undefined,
     retryAfter: typeof payload?.retry_after === 'number' ? payload.retry_after : undefined,
+    payload: payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : undefined,
   })
 }
 
