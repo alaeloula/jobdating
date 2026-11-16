@@ -26,7 +26,7 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 | # | Tâche | Références | Prio |
 |---|---|---|---|
 | T-10 (JD-15) | Gestion des utilisateurs (CME, Direction, administrateurs) | ADM-01 | J |
-| T-11 (JD-16) | Entreprises : création, nom d'utilisateur et mot de passe générés, fiche imprimable | ADM-02 | J |
+| T-11 (JD-16) | Entreprises : création, nom d'utilisateur et mot de passe générés, fiche imprimable ; profils recherchés et bandeau d'avertissement, recruteurs enregistrés en consultation (V2) | ADM-02, RG-ENTR-08, DECISIONS 16/11 | J |
 | T-12 (JD-17) | Apprenants : fiche, modification, réinitialisation, désactivation en masse | ADM-03 | J |
 | T-13 (JD-18) | Import du fichier YouCode School Admin (aperçu, contrôles, rapport, fichier des mots de passe) | ADM-04, RG-IMP-01 à 07 | J |
 | T-14 (JD-19) | Événement courant, inscription automatique des participants, emplacements | ADM-05, ADM-07 | J |
@@ -48,7 +48,7 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 | # | Tâche | Références | Prio |
 |---|---|---|---|
 | T-30 (JD-27) | Démarrer et terminer un entretien (passage, anti double soumission) | ENT-04, RG-PAS-01 à 12 | J |
-| T-31 (JD-28) | Grille d'évaluation avec sauvegarde automatique | ENT-05, RG-PAS-11, RG-EVA | J |
+| T-31 (JD-28) | Grille d'évaluation avec sauvegarde automatique ; rubrique 6 « Entretien complémentaire » et recruteurs de l'entreprise (V2) | ENT-05, RG-PAS-11, RG-EVA, RG-EVA-11 à 15 | J |
 | T-32 (JD-29) | Compléter, modifier, annuler (règle du jour de l'événement) | ENT-06 | J |
 | T-33 (JD-30) | Tableau de bord entreprise et « Mes passages » | ENT-01, ENT-07 | J |
 | T-34 (JD-31) | Test de bout en bout du parcours entreprise sur mobile (375 px) | CDC 11.1 | J |
@@ -57,7 +57,7 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 
 | # | Tâche | Références | Prio |
 |---|---|---|---|
-| T-40 (JD-32) | Espace apprenant : « Ma journée », programme, passages, état du CV | APP-00 à APP-03 | J |
+| T-40 (JD-32) | Espace apprenant : « Ma journée », programme, passages, état du CV ; suggestions d'entreprises (V2) | APP-00 à APP-03, RG-APP-01, RG-APP-02 | J |
 | T-41 (JD-33) | Notifications internes et temps réel (Reverb) | NOTIF-01 | J |
 | T-42 (JD-34) | Alertes automatiques des apprenants sans rencontre | NOTIF-02, STAT-06 | J |
 | T-43 (JD-35) | Régularisation d'un passage par l'administrateur | ADM-10 | J |
@@ -80,3 +80,4 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 | T-61 (JD-41) | Exports CSV et Excel en flux (modèle PC-43) + journal des exports | STAT-05, ENT-09, TRA-02 | A |
 | T-62 (JD-42) | Espace Direction en lecture seule | CDC 3.1 | A |
 | T-63 (JD-43) | Reprise des **passages historiques** | CDC 8.8, REP-01 à 03 | A |
+| T-44 (Jira à créer) | Suivi des passages (CME) : liste de tous les passages, statut de suivi, détail, historique, rappels J+7, J+30, J+90, export. Remplace l'écran « Passages des entreprises » | DECISIONS 16/11 (V2) | A |
