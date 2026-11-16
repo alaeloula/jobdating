@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router'
 import { ApiEventsListener, GuestOnly, RequireAuth, RootRedirect } from './auth/guards'
 import AppLayout from './layout/AppLayout'
+import AuditLogPage from './pages/AuditLogPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 
@@ -27,6 +28,9 @@ export default function AppRoutes() {
           <Route element={<AppLayout />}>
             <Route element={<RequireAuth roles={['administrateur', 'cme', 'direction']} />}>
               <Route path="/pilotage" element={<HomePage title="Tableau de bord de pilotage" />} />
+            </Route>
+            <Route element={<RequireAuth roles={['administrateur']} />}>
+              <Route path="/journal-audit" element={<AuditLogPage />} />
             </Route>
             <Route element={<RequireAuth roles={['entreprise']} />}>
               <Route path="/entreprise" element={<HomePage title="Tableau de bord entreprise" />} />

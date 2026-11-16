@@ -2,10 +2,13 @@
 
 namespace App\Providers;
 
+use App\Enums\AuditAction;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -37,10 +40,16 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('login', function (Request $request) {
             $ip = (string) $request->ip();
+            $targetKey = self::loginTarget($request).'|'.$ip;
+            $ipKey = 'login:ip:'.$ip;
 
+            // Chaque limite transmet sa propre clé : le blocage est journalisé une fois par limite
+            // réellement dépassée (compte + IP, ou IP seule), quel que soit l'identifiant essayé.
             return [
-                Limit::perMinute(5)->by(self::loginTarget($request).'|'.$ip)->response(self::tooManyAttempts(...)),
-                Limit::perMinute(100)->by('login:ip:'.$ip)->response(self::tooManyAttempts(...)),
+                Limit::perMinute(5)->by($targetKey)
+                    ->response(fn (Request $r, array $headers) => self::tooManyAttempts($r, $headers, $targetKey, 'compte')),
+                Limit::perMinute(100)->by($ipKey)
+                    ->response(fn (Request $r, array $headers) => self::tooManyAttempts($r, $headers, $ipKey, 'adresse_ip')),
             ];
         });
     }
@@ -70,11 +79,34 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
+     * Journalise un blocage de connexion (TRA-01, décision du 16/11/2026), une seule fois par
+     * blocage de la limite dépassée : les tentatives suivantes pendant le délai, même sur
+     * d'autres identifiants, ne créent pas de nouvelle ligne (pas de remplissage du journal).
+     */
+    private static function recordThrottled(Request $request, int $seconds, string $limitKey, string $limitType): void
+    {
+        if (! Cache::add('audit:login-throttled:'.sha1($limitKey), true, $seconds)) {
+            return;
+        }
+
+        $raw = $request->input('identifier');
+        $identifier = is_string($raw) ? trim($raw) : '';
+
+        app(AuditLogger::class)->record(
+            AuditAction::LoginThrottled,
+            $identifier !== '' ? User::findForLogin($identifier) : null,
+            new: ['limite' => $limitType, 'identifiant' => mb_substr($identifier, 0, 255), 'delai_secondes' => $seconds],
+        );
+    }
+
+    /**
      * @param  array<string, string|int>  $headers
      */
-    private static function tooManyAttempts(Request $request, array $headers): JsonResponse
+    private static function tooManyAttempts(Request $request, array $headers, string $limitKey, string $limitType): JsonResponse
     {
         $seconds = max(1, (int) ($headers['Retry-After'] ?? 60));
+
+        self::recordThrottled($request, $seconds, $limitKey, $limitType);
 
         return response()->json([
             'message' => "Trop de tentatives de connexion. Réessayez dans {$seconds} secondes.",

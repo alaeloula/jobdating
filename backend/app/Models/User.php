@@ -3,8 +3,12 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\AuditAction;
 use App\Enums\Role;
+use App\Observers\UserAuditObserver;
+use App\Services\AuditLogger;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -13,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use LogicException;
 use Spatie\Permission\Traits\HasRoles;
 
+#[ObservedBy([UserAuditObserver::class])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -22,6 +27,9 @@ class User extends Authenticatable
     }
 
     private const SINGLE_ROLE_MESSAGE = 'Un compte a un seul rôle (RG-ACC-06) : utiliser setRole().';
+
+    /** Vrai pendant un remplacement de rôle (syncRoles), pour éviter un double journal. */
+    private bool $replacingRoles = false;
 
     /**
      * The attributes that are mass assignable.
@@ -131,8 +139,19 @@ class User extends Authenticatable
 
         return DB::transaction(function () use ($roles): static {
             $this->lockForRoleChange();
+            $before = $this->roleNameFromDatabase();
 
-            return $this->replaceRoles(...$roles);
+            // Spatie remplace le rôle en passant par assignRole() : ce changement n'est
+            // journalisé qu'une fois, ici.
+            $this->replacingRoles = true;
+            try {
+                $result = $this->replaceRoles(...$roles);
+            } finally {
+                $this->replacingRoles = false;
+            }
+            $this->recordRoleChange($before);
+
+            return $result;
         });
     }
 
@@ -159,8 +178,36 @@ class User extends Authenticatable
                 throw new LogicException(self::SINGLE_ROLE_MESSAGE);
             }
 
-            return $this->attachRoles(...$roles);
+            $before = $this->roleNameFromDatabase();
+            $result = $this->attachRoles(...$roles);
+            if (! $this->replacingRoles) {
+                $this->recordRoleChange($before);
+            }
+
+            return $result;
         });
+    }
+
+    /**
+     * Rôle actuellement enregistré en base (sans le cache de la relation).
+     */
+    private function roleNameFromDatabase(): ?string
+    {
+        $name = $this->roles()->value('name');
+
+        return is_string($name) ? $name : null;
+    }
+
+    /**
+     * Journalise un changement de rôle (TRA-01), dans la même transaction que le changement.
+     */
+    private function recordRoleChange(?string $before): void
+    {
+        $after = $this->roleNameFromDatabase();
+
+        if ($after !== $before) {
+            app(AuditLogger::class)->record(AuditAction::RoleChanged, $this, ['role' => $before], ['role' => $after]);
+        }
     }
 
     /**

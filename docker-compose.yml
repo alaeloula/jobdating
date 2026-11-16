@@ -18,6 +18,9 @@ services:
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+      # Déclencheurs du journal d'audit (T-06) créés par l'utilisateur applicatif, sans droit SUPER,
+      # alors que la journalisation binaire est active (sinon erreur 1419).
+      - --log-bin-trust-function-creators=1
     ports:
       # 3307 côté poste pour ne pas entrer en conflit avec un MySQL déjà installé.
       - "3307:3306"
