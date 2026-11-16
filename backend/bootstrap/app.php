@@ -1,10 +1,18 @@
 <?php
 
+use App\Http\Middleware\EnsureSessionIsValid;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Spatie\Permission\Exceptions\UnauthorizedException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,11 +23,46 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Sanctum en mode session par cookie pour l'application React (CDC 9.5).
+        $middleware->statefulApi();
+
+        // Backend en API seule : un visiteur non connecté reçoit une erreur 401, jamais une redirection.
+        $middleware->redirectGuestsTo(fn (Request $request) => null);
+
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
+            'session.valid' => EnsureSessionIsValid::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Erreurs de l'API toujours en JSON, en français, sans détail technique (EXI-SEC-05).
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+        );
+
+        $exceptions->render(fn (AuthenticationException $e, Request $request) => response()->json([
+            'message' => 'Votre session a expiré. Veuillez vous reconnecter.',
+            'code' => 'unauthenticated',
+        ], 401));
+
+        $exceptions->render(function (AuthorizationException|AccessDeniedHttpException|UnauthorizedException $e, Request $request) {
+            return response()->json([
+                'message' => 'Vous n\'avez pas accès à cette page.',
+                'code' => 'forbidden',
+            ], 403);
+        });
+
+        // Laravel transforme TokenMismatchException en HttpException 419 avant ces callbacks :
+        // on intercepte donc l'exception HTTP, uniquement pour le statut 419.
+        $exceptions->render(fn (HttpException $e, Request $request) => $e->getStatusCode() === 419
+            ? response()->json([
+                'message' => 'La page a expiré. Veuillez réessayer.',
+                'code' => 'csrf_token_mismatch',
+            ], 419)
+            : null);
+
+        $exceptions->render(fn (NotFoundHttpException $e, Request $request) => $request->is('api/*')
+            ? response()->json(['message' => 'Ressource introuvable.', 'code' => 'not_found'], 404)
+            : null);
     })->create();

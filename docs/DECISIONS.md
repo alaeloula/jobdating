@@ -4,6 +4,19 @@
 
 Les décisions métier validées sont dans l'**annexe C du cahier des charges** (`reference/CAHIER_DES_CHARGES_V2.md`). Elles sont déjà intégrées dans le corps du document. Ne pas les recopier ici : l'annexe C fait foi.
 
+### Décisions validées après le CDC V2, à reporter dans le CDC
+
+Ces décisions s'écartent du CDC V2. Elles priment sur les passages cités jusqu'à la mise à jour du CDC.
+
+| Date | Décision | Écart avec le CDC V2 | Source |
+|---|---|---|---|
+| 14/11/2026 | **Première connexion de l'apprenant** : le changement du mot de passe généré n'est pas obligatoire. L'apprenant accède directement à son espace ; il peut changer son mot de passe depuis son profil (AUTH-03). | RG-AUTH-13, AUTH-01 (exceptions), AUTH-02, ADM-03 (« changement demandé à la connexion suivante »), ADM-04, profil Apprenant (3.1) | Responsable technique |
+| 14/11/2026 | **Mot de passe généré** : envoyé par e-mail **et** affiché à l'administrateur **une seule fois**, à la création ou à la réinitialisation. Stocké haché, il ne peut pas être relu ensuite. Pour un import, l'affichage est remplacé par le fichier des mots de passe (décision suivante). | ADM-03 (création manuelle : e-mail seulement) | Responsable technique |
+| 14/11/2026 | **Réinitialisation par l'administrateur pour tous les comptes** : apprenant, entreprise, CME, Direction et administrateur, y compris son propre compte. Nouveau mot de passe généré, affiché une fois à l'administrateur et envoyé en clair par e-mail (sauf entreprise, voir ci-dessous). L'ancien mot de passe est refusé, toutes les sessions du compte sont fermées (RG-AUTH-12), l'action est journalisée. La création des comptes CME, Direction et administrateur reste faite par lien d'activation (AUTH-02). L'envoi du mot de passe en clair par e-mail est un risque accepté. | AUTH-02 (« aucun mot de passe connu d'un tiers »), RG-AUTH-08, AUTH-03 (acteurs) | Responsable technique |
+| 14/11/2026 | **Fichier des mots de passe d'un import d'apprenants** : format Excel (Prénom, Nom, E-mail, Classe, Mot de passe). Téléchargeable **plusieurs fois** jusqu'à sa suppression manuelle par l'administrateur ; aucune suppression automatique. Jusque-là, les mots de passe sont conservés chiffrés sur le serveur, jamais en clair. Chaque téléchargement et la suppression sont journalisés. | ADM-04 étape 5, RG-IMP-05 et critère d'acceptation (« une seule fois ») | Responsable technique |
+| 14/11/2026 | **Entreprises** : aucun e-mail ni lien d'activation, y compris à l'import. Les identifiants sont remis manuellement (fiche imprimable). | ADM-04, import des entreprises (« reçoivent leur lien d'activation ») ; confirme RG-ENTR-06 | Responsable technique |
+| 16/11/2026 | **Compte entreprise partagé** : plusieurs sessions simultanées sont autorisées avec le même compte ; une connexion ne ferme pas les autres sessions. Seules la déconnexion (session concernée), la désactivation du compte et la limite de 12 h y mettent fin. | Précise PC-05 et RG-AUTH-12 (fermeture des autres sessions réservée au changement ou à la réinitialisation du mot de passe) | Responsable technique |
+
 ## Décisions techniques
 
 | Date | Décision | Source |
