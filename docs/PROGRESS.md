@@ -75,3 +75,65 @@ Trois constats majeurs confirmés, tous corrigés :
 3. `syncRoles()` refusé supprimait le rôle actuel : nombre de rôles vérifié avant tout retrait, remplacement dans une transaction.
 
 Tests de régression ajoutés pour chacun des trois cas.
+
+Remarques facultatives de la contre-revue Codex, non traitées :
+- le test de la concurrence sur le verrou (deux connexions MySQL simultanées) n'est pas couvert ; la contrainte d'unicité en base reste la garantie ;
+- règle pour les factories : créer le compte, puis attribuer le rôle (`afterCreating`, jamais `afterMaking`). Appliquée dans `UserFactory::withRole()` (T-04).
+
+## 2026-11-14 — T-04 (JD-11) : connexion
+
+Décisions du responsable technique (détail dans `DECISIONS.md`) :
+- première connexion de l'apprenant non bloquante (écart avec RG-AUTH-13) ; mot de passe généré affiché une fois et envoyé par e-mail ; réinitialisation par l'administrateur pour tous les comptes ; fichier Excel des mots de passe d'import supprimé manuellement ; aucun e-mail aux entreprises. Le CDC sera mis à jour après validation ;
+- frontend : TanStack Query, React Hook Form, Zod et `@hookform/resolvers` (validation partielle d'ARCH-02) ;
+- accueil de la Direction : tableau de bord de pilotage, lecture seule.
+
+Réalisé :
+- migration `users` : `first_name`, `last_name`, `username` (unique), `email` facultatif, `phone`, `activated_at`, `last_login_at`, `deactivated_at`, suppression logique ; `name` et `email_verified_at` retirés ;
+- `POST /api/v1/login`, `POST /api/v1/logout`, `GET /api/v1/me` ; Sanctum en mode session (`statefulApi`) ; erreurs JSON en français (401, 403, 404, 419, 422, 429) ;
+- refus : identifiants faux (message générique, 422), compte supprimé (traité comme inexistant), désactivé, non activé, sans rôle (403, motif donné seulement après un mot de passe correct) ;
+- limiteur `login` (RG-AUTH-01) ; middleware `session.valid` : compte désactivé déconnecté immédiatement, session limitée à 12 h depuis la connexion (RG-AUTH-02) ;
+- `Role::homePath()` ; `DemoAccountsSeeder` (APP_ENV=local seulement, non appelé par `DatabaseSeeder`) ;
+- `SANCTUM_STATEFUL_DOMAINS` ajouté (`.env.example`) pour le serveur Vite `localhost:5173` ;
+- frontend : client API (cookie, CSRF, rejeu après 419, événements 401 / 403), gardes de route par rôle, mise en page avec déconnexion, écran « Connexion », accueils vides par rôle ; configuration Vitest (jsdom).
+
+Hypothèses à confirmer :
+- les comptes entreprise et apprenant devront être créés avec `activated_at` renseigné (T-11, T-12, T-13), sinon leur connexion est refusée comme « non activé » ;
+- compte sans rôle : connexion refusée (« Votre compte n'a pas de rôle. Contactez l'administration. »), texte non prévu par le CDC ;
+- les sous-titres de la maquette (« [Nom du JobDating] ») et le lien « Mot de passe oublié ? » arriveront avec l'événement courant (T-14) et T-05.
+
+Points d'attention :
+- les tests backend tournent sous PHP 8.5.12 (Herd n'a pas PHP 8.4) : ENV-01 reste ouvert ;
+- tests lents (environ 5 s par test sur MySQL Docker) : piste à étudier séparément ;
+- la table `personal_access_tokens` (jetons Sanctum) existe mais n'est pas utilisée (CDC 9.5 : pas de jetons) ;
+- `php artisan serve` échoue sur le poste (« Unable to start curl module », PHP 8.5 de Herd) ; contournement par `php -S` depuis `backend/public` (voir `CURRENT_TASK.md`).
+
+Vérification dans le navigateur (14/11, Laravel + Vite en local, compte de démonstration entreprise) : `/pilotage` sans session → connexion ; mauvais mot de passe → « Identifiants incorrects. » ; bon mot de passe → tableau de bord entreprise ; session conservée après rechargement ; `/login` connecté → accueil ; `/pilotage` → accueil entreprise + « Vous n'avez pas accès à cette page. » ; affichage mobile 375 px ; déconnexion → retour à la connexion.
+
+Ajout validé après test fonctionnel (14/11) : photo du campus YouCode (reprise de l'ancienne application) à gauche de l'écran de connexion, à partir de 1024 px seulement. Droit d'utilisation de la photo à confirmer auprès de YouCode.
+
+### Corrections après la revue indépendante (Codex, `docs/reviews/REVIEW-T-04-connexion.md`, 16/11)
+
+Verdict de la revue : « À corriger avant fusion ». Les 7 constats ont été analysés avec le responsable technique (aucun ne contredit les décisions du 14/11), puis corrigés :
+1. Limiteur contournable par une variante accentuée (`société` = `societe` pour MySQL) : compteur sur l'id du compte quand il existe, sinon sur l'identifiant normalisé sans accents (`User::findForLogin()` partagé avec la connexion).
+2. Déconnexion échouée présentée comme réussie : l'état local n'est effacé qu'après confirmation du serveur (204, ou 401 = session déjà fermée) ; sinon message « La déconnexion a échoué… » et l'utilisateur reste sur la page.
+3. Annulation de la migration `users` laissant la table à moitié modifiée : `down()` refuse avant toute modification s'il existe des comptes sans e-mail. Base de développement jetable (aucune donnée réelle, confirmé le 16/11) : l'ancien `name` n'est pas repris, hypothèse documentée dans la migration.
+4. Paramètres de la page demandée perdus après connexion : un seul chemin de navigation (`GuestOnly`), chemins internes uniquement ; après une déconnexion volontaire, pas de « page demandée » pour le compte suivant.
+5. Identifiant non textuel → erreur 500 : le limiteur ignore les valeurs non textuelles, la validation renvoie 422.
+6. Erreur CSRF non traduite hors tests : rendu JSON français sur l'exception HTTP 419 (Laravel convertit `TokenMismatchException` avant les callbacks).
+7. Durée de réponse révélant l'existence d'un compte : vérification d'un hash factice (même coût, mis en cache) pour un identifiant inconnu.
+
+Question 2 de la revue : une session sans heure de connexion est désormais refusée ; `Tests\TestCase::actingAs()` renseigne cette heure (`be()` pour simuler l'absence).
+
+Tests de régression ajoutés pour chaque point (backend `tests/Feature/Auth`, frontend `src/auth/auth.test.tsx`), plus un cycle complet connexion → `/me` → déconnexion sans `actingAs`.
+
+### Contre-revue Codex (`docs/reviews/REVIEW-T-04-contre-revue.md`, 16/11)
+
+Verdict : « À fusionner après corrections mineures ». Les 7 constats sont confirmés corrigés (178 tests backend, 461 assertions, et 14 tests frontend confirmés par l'exécution indépendante).
+
+Nouveau constat corrigé : le cache des mutations TanStack conservait l'identifiant, le mot de passe saisi et l'identité renvoyée (le remplacement de `clear()` par `removeQueries()` ne purgeait plus les mutations). Correctif : envois de connexion et de déconnexion non conservés une fois l'écran fermé (`gcTime: 0`) ; après une déconnexion confirmée, mutations terminées supprimées. Tests ajoutés (cas 204 et 401) : 16 tests frontend.
+
+Sessions parallèles d'un compte entreprise (PC-05) : règle confirmée par le responsable technique le 16/11 (voir `DECISIONS.md`). Le test `tests/Feature/Auth/CompanyConcurrentSessionsTest.php` (deux navigateurs, cookies séparés, sessions en base) la vérifie. Il est apparu dans le dossier pendant la revue, sans avoir été écrit par Claude ; contenu relu et conservé.
+
+Reportés, à traiter dans les tâches concernées :
+- T-01 (mise en ligne) : proxies de confiance et en-têtes transmis, pour que `$request->ip()` (limiteur) désigne bien le client ; HTTPS, cookies `Secure`, `SANCTUM_STATEFUL_DOMAINS` de production ;
+- T-10, T-12 (désactivation par l'administrateur) : supprimer toutes les sessions du compte (table `sessions`), pour qu'une session restée inactive pendant la désactivation ne revienne pas après une réactivation.

@@ -6,6 +6,7 @@ namespace App\Models;
 use App\Enums\Role;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, Notifiable {
+    use HasFactory, HasRoles, Notifiable, SoftDeletes {
         HasRoles::assignRole as private attachRoles;
         HasRoles::syncRoles as private replaceRoles;
     }
@@ -28,8 +29,11 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'first_name',
+        'last_name',
+        'username',
         'email',
+        'phone',
         'password',
     ];
 
@@ -51,9 +55,44 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'activated_at' => 'datetime',
+            'last_login_at' => 'datetime',
+            'deactivated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Compte désigné par l'identifiant de connexion : e-mail ou nom d'utilisateur (AUTH-01).
+     *
+     * La comparaison suit la collation MySQL (casse et accents ignorés). Un compte supprimé
+     * (suppression logique) n'est pas retrouvé : il est traité comme inexistant.
+     */
+    public static function findForLogin(string $identifier): ?self
+    {
+        if ($identifier === '') {
+            return null;
+        }
+
+        return static::query()
+            ->where(fn ($query) => $query->where('email', $identifier)->orWhere('username', $identifier))
+            ->first();
+    }
+
+    /**
+     * Compte activé (AUTH-02) : sans activation, la connexion est refusée.
+     */
+    public function isActivated(): bool
+    {
+        return $this->activated_at !== null;
+    }
+
+    /**
+     * Compte désactivé : connexion refusée et sessions perdues (RG-ACC-05).
+     */
+    public function isDeactivated(): bool
+    {
+        return $this->deactivated_at !== null;
     }
 
     /**

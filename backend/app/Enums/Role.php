@@ -25,6 +25,21 @@ enum Role: string
     }
 
     /**
+     * Page d'accueil du rôle dans l'application React (AUTH-01, RG-ACC-03).
+     *
+     * La Direction arrive sur le tableau de bord de pilotage, en lecture seule
+     * (choix du responsable technique, 14/11/2026 : AUTH-01 ne la précise pas).
+     */
+    public function homePath(): string
+    {
+        return match ($this) {
+            self::Administrateur, self::Cme, self::Direction => '/pilotage',
+            self::Entreprise => '/entreprise',
+            self::Apprenant => '/ma-journee',
+        };
+    }
+
+    /**
      * Permissions du rôle, d'après la matrice des droits (CDC 3.2).
      *
      * L'administrateur reçoit chaque permission explicitement, sans règle « peut tout » :
