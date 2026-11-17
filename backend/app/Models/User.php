@@ -31,6 +31,34 @@ class User extends Authenticatable
     /** Vrai pendant un remplacement de rôle (syncRoles), pour éviter un double journal. */
     private bool $replacingRoles = false;
 
+    /** Profondeur des opérations qui journalisent elles-mêmes la modification du compte. */
+    private static int $accountAuditMuted = 0;
+
+    /**
+     * Exécute une opération qui écrit sa propre ligne de journal (activation, réinitialisation,
+     * changement du mot de passe) : l'observateur n'écrit pas « Compte modifié » en double.
+     * Limité à l'opération, rétabli même en cas d'exception.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $operation
+     * @return T
+     */
+    public static function withoutAccountAudit(callable $operation): mixed
+    {
+        self::$accountAuditMuted++;
+        try {
+            return $operation();
+        } finally {
+            self::$accountAuditMuted--;
+        }
+    }
+
+    public static function accountAuditMuted(): bool
+    {
+        return self::$accountAuditMuted > 0;
+    }
+
     /**
      * The attributes that are mass assignable.
      *

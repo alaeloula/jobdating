@@ -27,6 +27,11 @@ class UserAuditObserver
 
     public function updated(User $user): void
     {
+        // Activation, réinitialisation et changement du mot de passe ont leur propre ligne (T-05).
+        if (User::accountAuditMuted()) {
+            return;
+        }
+
         $changes = array_diff(array_keys($user->getChanges()), self::IGNORED);
 
         if ($user->wasChanged('deactivated_at')) {

@@ -67,6 +67,7 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 
 | # | Tâche | Références | Prio |
 |---|---|---|---|
+| T-49 (Jira à créer) | Corriger les erreurs connues de `docs/ERREURS_A_CORRIGER.md` (cas rares reportés, sans impact sur les développements suivants), **avant la recette** | `ERREURS_A_CORRIGER.md` | J |
 | T-50 (JD-36) | Recette par l'équipe CME en préproduction | CDC 11.8, EXI-ERG-02 | J |
 | T-51 (JD-37) | Test de charge (224 apprenants, 7 CME, entreprises) | EXI-PERF-05 | J |
 | T-52 (JD-38) | Sauvegarde et restauration testées | EXI-FIA-02 | J |

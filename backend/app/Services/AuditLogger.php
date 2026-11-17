@@ -30,6 +30,9 @@ class AuditLogger
     /** Auteur affiché pour une action lancée hors requête web (commande, seeder, planificateur). */
     public const SYSTEM_LABEL = 'Système';
 
+    /** Auteur d'une demande publique (mot de passe oublié, nouveau lien d'activation). */
+    public const VISITOR_LABEL = 'Visiteur non connecté';
+
     /** Clés masquées (seuls les 2 derniers caractères restent visibles). */
     private const MASKED_KEYS = ['cnie'];
 
@@ -43,14 +46,20 @@ class AuditLogger
         array $old = [],
         array $new = [],
         ?User $actor = null,
+        bool $visitor = false,
     ): AuditLog {
-        $actor ??= $this->currentUser();
+        // $visitor : action d'un visiteur non connecté, notée comme telle même dans une tâche
+        // de fond, et sans jamais déduire l'auteur d'une session présente (T-05, constat 6).
+        if (! $visitor) {
+            $actor ??= $this->currentUser();
+        }
         // Hors requête web (commande, seeder, planificateur) : auteur « Système », pas d'adresse IP.
         $web = request()->route() !== null;
 
         return AuditLog::query()->create([
-            'user_id' => $actor?->getKey(),
+            'user_id' => $visitor ? null : $actor?->getKey(),
             'actor_label' => match (true) {
+                $visitor => self::VISITOR_LABEL,
                 $actor !== null => self::userLabel($actor),
                 ! $web => self::SYSTEM_LABEL,
                 default => null,

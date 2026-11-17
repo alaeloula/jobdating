@@ -20,6 +20,12 @@ enum AuditAction: string
     case AccountDeleted = 'account.deleted';
     case AccountRestored = 'account.restored';
     case RoleChanged = 'account.role_changed';
+    case ActivationLinkSent = 'account.activation_link_sent';
+    case PasswordResetLinkSent = 'account.password_reset_link_sent';
+    case LinkEmailFailed = 'account.link_email_failed';
+    case AccountActivated = 'account.activated';
+    case PasswordReset = 'account.password_reset';
+    case PasswordChanged = 'account.password_changed';
 
     case ReferentialCreated = 'referential.created';
     case ReferentialUpdated = 'referential.updated';
@@ -32,7 +38,9 @@ enum AuditAction: string
         return match ($this) {
             self::LoginSucceeded, self::LoginFailed, self::LoginThrottled, self::Logout => AuditCategory::Connexions,
             self::AccountCreated, self::AccountUpdated, self::AccountDeactivated, self::AccountReactivated,
-            self::AccountDeleted, self::AccountRestored, self::RoleChanged => AuditCategory::Comptes,
+            self::AccountDeleted, self::AccountRestored, self::RoleChanged, self::ActivationLinkSent,
+            self::PasswordResetLinkSent, self::LinkEmailFailed, self::AccountActivated, self::PasswordReset,
+            self::PasswordChanged => AuditCategory::Comptes,
             self::ReferentialCreated, self::ReferentialUpdated, self::ReferentialDeactivated,
             self::ReferentialReactivated, self::ReferentialReordered => AuditCategory::Referentiels,
         };
@@ -52,6 +60,12 @@ enum AuditAction: string
             self::AccountDeleted => 'Compte supprimé',
             self::AccountRestored => 'Compte restauré',
             self::RoleChanged => 'Rôle modifié',
+            self::ActivationLinkSent => 'Lien d’activation remis à la messagerie',
+            self::PasswordResetLinkSent => 'Lien de réinitialisation remis à la messagerie',
+            self::LinkEmailFailed => 'Échec de remise d’un e-mail de lien',
+            self::AccountActivated => 'Compte activé',
+            self::PasswordReset => 'Mot de passe réinitialisé',
+            self::PasswordChanged => 'Mot de passe changé',
             self::ReferentialCreated => 'Référentiel : valeur ajoutée',
             self::ReferentialUpdated => 'Référentiel : valeur modifiée',
             self::ReferentialDeactivated => 'Référentiel : valeur désactivée',

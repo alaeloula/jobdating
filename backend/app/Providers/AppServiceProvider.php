@@ -45,6 +45,17 @@ class AppServiceProvider extends ServiceProvider
      */
     private function configureRateLimiting(): void
     {
+        // T-05 : vérification et utilisation des liens, 10 / min par IP (contre l'abus ; un jeton
+        // de 64 caractères ne se devine pas).
+        RateLimiter::for('password-token', fn (Request $request) => Limit::perMinute(10)
+            ->by('password-token:'.$request->ip())
+            ->response(fn (Request $r, array $headers) => self::tooManyRequests($headers)));
+
+        // T-05 : changement depuis le profil, 5 tentatives / min par compte (RG-AUTH-11).
+        RateLimiter::for('password-change', fn (Request $request) => Limit::perMinute(5)
+            ->by('password-change:'.($request->user()?->getAuthIdentifier() ?? $request->ip()))
+            ->response(fn (Request $r, array $headers) => self::tooManyRequests($headers)));
+
         RateLimiter::for('login', function (Request $request) {
             $ip = (string) $request->ip();
             $targetKey = self::loginTarget($request).'|'.$ip;
@@ -104,6 +115,20 @@ class AppServiceProvider extends ServiceProvider
             $identifier !== '' ? User::findForLogin($identifier) : null,
             new: ['limite' => $limitType, 'identifiant' => mb_substr($identifier, 0, 255), 'delai_secondes' => $seconds],
         );
+    }
+
+    /**
+     * @param  array<string, string|int>  $headers
+     */
+    private static function tooManyRequests(array $headers): JsonResponse
+    {
+        $seconds = max(1, (int) ($headers['Retry-After'] ?? 60));
+
+        return response()->json([
+            'message' => "Trop de demandes. Réessayez dans {$seconds} secondes.",
+            'code' => 'too_many_requests',
+            'retry_after' => $seconds,
+        ], 429, $headers);
     }
 
     /**
