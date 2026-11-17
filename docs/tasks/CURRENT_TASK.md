@@ -1,23 +1,22 @@
-# Tâche courante – T-02 (JD-9) : référentiels
+# Tâche courante – T-05 (JD-12) : activation, oubli et changement du mot de passe
 
-Branche : `feature/T-02-referentiels`.
+Branche : `feature/T-05-mot-de-passe`.
 
-Plan validé : `docs/tasks/PLAN-T-02.md` (version 3, après la revue et la contre-revue du plan par Codex).
+Plan validé : `docs/tasks/PLAN-T-05.md` (version 3, après la revue et la contre-revue du plan par Codex ; pas de troisième revue, les trois derniers points sont à vérifier dans la revue du code). Décisions : `docs/DECISIONS.md`, ligne du 17/11/2026 « Mots de passe (T-05) ».
 
 Périmètre livré :
-- 8 référentiels : filières, classes, campus, promotions, secteurs, **compétences**, types d'opportunité, étiquettes d'évaluation (tables `filieres`, `classes`, `campuses`, `promotions`, `sectors`, `competences`, `opportunity_types`, `evaluation_tags_ref`) ;
-- gestion par l'administrateur et l'équipe CME (`referentials.manage`) : liste, ajout, modification, désactivation / réactivation, ordre (opportunités ; étiquettes par type) ; **aucune suppression** ;
-- lecture des options pour tout utilisateur connecté (actives ; `?inactives=1` avec leur état) ;
-- règles : code de filière définitif ; filière d'une classe utilisée modifiable **avec confirmation** (`confirmer_changement_filiere: true`, sinon 409 avec le nombre d'apprenants) ; type d'une étiquette utilisée non modifiable ; contrôles faits sous verrou de la ligne ;
-- journal d'audit : catégorie « Référentiels » ;
-- données initiales : opportunités (PC-23) et étiquettes (ENT-05) avec clés fixes ; autres listes vides ;
-- écran « Référentiels » (maquette `admin-12`) et lien dans l'en-tête.
+- règle commune `StrongPassword` : 10 à 64 caractères, au plus 72 octets, refus des 10 000 mots de passe les plus courants (`backend/resources/security/common-passwords.txt`, SecLists) ;
+- liens à usage unique (`password_tokens`, SHA-256 seul, un lien par compte et par type, verrous compte puis lien, expiration 48 h / 60 min, purge quotidienne) ;
+- activation des comptes CME, Direction, administrateur (connexion automatique) ; service `AccountActivationService` pour T-10 ;
+- mot de passe oublié (apprenant, CME, Direction, administrateur ; nouveau lien d'activation pour un compte non activé), même réponse et même travail quel que soit le compte, tâche de fond chiffrée qui décide et envoie ;
+- réinitialisation (toutes les sessions fermées, retour à la connexion) et changement depuis « Mon profil » (5 rôles, autres sessions fermées sauf pour un compte entreprise — décision du 17/11 —, liens de réinitialisation annulés) ;
+- journal : 6 nouvelles actions (catégorie « Comptes »), auteur explicite (« Visiteur non connecté » pour les demandes publiques) ;
+- frontend : « Mot de passe oublié ? » sur la connexion, pages « Activer mon compte », « Mot de passe oublié », « Nouveau mot de passe », « Mon profil » (lien d'en-tête pour tous les rôles).
 
-Points d'extension à brancher obligatoirement :
-- **T-12** : `App\Contracts\ClassUsage` (nombre d'apprenants d'une classe), et verrou de la ligne de classe à la première affectation d'un apprenant (aussi T-13) ;
-- **T-31** : `App\Contracts\TagUsage` (étiquette utilisée), et verrou de la ligne d'étiquette à l'association avec une évaluation.
-
-Hors périmètre : utilisation des listes dans les formulaires et filtres (T-11, T-12, T-13, T-31, T-40) ; compétences recherchées (T-11) et compétences des apprenants (T-12) ; saisie en masse (COMP-01).
+Contrats pour les tâches suivantes :
+- **T-10** : après la création d'un compte CME / Direction / administrateur (et pour le bouton « Renvoyer le lien »), appeler `AccountActivationService::sendLink($user, $admin)` après l'attribution du rôle ;
+- **T-10 / T-11 / T-12** (réinitialisation par l'administrateur) : appeler `PasswordTokenService::revokeAll($user, PasswordTokenType::Reset)` et `SessionRevoker::closeAll($user)` ; les mots de passe générés doivent respecter 72 octets ;
+- **toute saisie de mot de passe** : règle `App\Rules\StrongPassword`.
 
 Contrôles locaux (MySQL Docker démarré) :
 
@@ -25,9 +24,9 @@ Contrôles locaux (MySQL Docker démarré) :
 # backend/
 vendor/bin/pint --test
 vendor/bin/phpstan analyse
-php artisan test
 php artisan migrate
-php artisan db:seed --class=ReferentialsSeeder
+php artisan test
+php artisan queue:work   # pour recevoir les e-mails dans Mailpit (http://localhost:8025)
 
 # frontend/
 npm.cmd run lint
@@ -35,4 +34,4 @@ npm.cmd run test
 npm.cmd run build
 ```
 
-Tâche suivante : T-05 (JD-12) – activation, oubli et changement du mot de passe.
+Tâche suivante : à choisir dans `docs/BACKLOG.md` (semaine 2 : T-10).

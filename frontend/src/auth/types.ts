@@ -21,6 +21,8 @@ export const SESSION_EXPIRED_MESSAGE = 'Votre session a expiré. Veuillez vous r
 export interface LoginLocationState {
   from?: { pathname: string; search?: string }
   expired?: boolean
+  /** Message d'information (ex. « Mot de passe modifié. Vous pouvez vous connecter. »). */
+  notice?: string
 }
 
 /** État de navigation portant un message à afficher (par exemple après un refus d'accès). */

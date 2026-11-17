@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Auth;
 
 use App\Enums\AuditAction;
 use App\Http\Controllers\Controller;
-use App\Http\Middleware\EnsureSessionIsValid;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\CurrentUserResource;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Auth\SessionOpener;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -30,7 +29,10 @@ class LoginController extends Controller
 
     public const NO_ROLE = 'Votre compte n\'a pas de rôle. Contactez l\'administration.';
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly SessionOpener $sessions,
+    ) {}
 
     public function __invoke(LoginRequest $request): JsonResponse
     {
@@ -62,13 +64,7 @@ class LoginController extends Controller
             return $this->refuse(403, 'account_without_role', self::NO_ROLE, $identifier, $user);
         }
 
-        Auth::guard('web')->login($user);
-        $request->session()->regenerate();
-        $request->session()->put(EnsureSessionIsValid::LOGGED_IN_AT, now()->getTimestamp());
-
-        $user->forceFill(['last_login_at' => now()])->saveQuietly();
-
-        $this->audit->record(AuditAction::LoginSucceeded, $user, actor: $user);
+        $this->sessions->open($request, $user);
 
         return CurrentUserResource::make($user)->response();
     }

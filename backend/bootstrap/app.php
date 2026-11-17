@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureSessionIsValid;
+use App\Http\Middleware\NoStore;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -33,9 +34,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'session.valid' => EnsureSessionIsValid::class,
+            'no.store' => NoStore::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Mots de passe et jetons jamais conservés ni renvoyés après une erreur (T-05).
+        $exceptions->dontFlash(['password', 'password_confirmation', 'current_password', 'token']);
+
         // Erreurs de l'API toujours en JSON, en français, sans détail technique (EXI-SEC-05).
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),

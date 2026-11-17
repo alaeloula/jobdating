@@ -395,7 +395,7 @@ class ReferentialManagementTest extends TestCase
              * @param  array<string, mixed>  $old
              * @param  array<string, mixed>  $new
              */
-            public function record(AuditAction $action, ?Model $subject = null, array $old = [], array $new = [], ?User $actor = null): AuditLog
+            public function record(AuditAction $action, ?Model $subject = null, array $old = [], array $new = [], ?User $actor = null, bool $visitor = false): AuditLog
             {
                 throw new \RuntimeException('Journal indisponible.');
             }

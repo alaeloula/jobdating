@@ -44,6 +44,9 @@ export default function AppLayout() {
                     Journal d’audit
                   </NavLink>
                 )}
+                <NavLink to="/profil" className={navClass}>
+                  Mon profil
+                </NavLink>
               </nav>
             )}
           </div>

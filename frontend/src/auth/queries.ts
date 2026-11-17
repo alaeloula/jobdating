@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, apiRequest } from '../lib/api'
+import { clearClientSession } from './session'
 import type { CurrentUser } from './types'
 
 export const meQueryKey = ['auth', 'me'] as const
@@ -81,19 +82,9 @@ export function useLogout() {
     },
     // Uniquement après une déconnexion confirmée par le serveur.
     onSuccess: () => {
-      // Aucune donnée de l'utilisateur précédent ne reste en mémoire. Les entrées « auth » sont
-      // mises à jour plutôt que supprimées, pour que les écrans abonnés voient la déconnexion.
-      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'auth' })
-      // Les envois terminés (connexion : identifiant, mot de passe, identité renvoyée) sont aussi
-      // effacés. La déconnexion en cours est gardée jusqu'à la fin de ce traitement.
-      const mutations = queryClient.getMutationCache()
-      mutations
-        .getAll()
-        .filter((mutation) => mutation.state.status !== 'pending')
-        .forEach((mutation) => mutations.remove(mutation))
-      queryClient.setQueryData(sessionExpiredQueryKey, false)
-      queryClient.setQueryData(loggedOutQueryKey, true)
-      queryClient.setQueryData(meQueryKey, null)
+      // Aucune donnée de l'utilisateur précédent ne reste en mémoire (requêtes et envois terminés :
+      // identifiant, mot de passe, identité renvoyée). La déconnexion en cours est gardée.
+      clearClientSession(queryClient, null, true)
     },
   })
 }

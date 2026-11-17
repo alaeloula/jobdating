@@ -16,6 +16,12 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
+    | Adresse de l'application React : liens d'activation et de réinitialisation envoyés par
+    | e-mail (T-05). Le jeton est placé après « # » (jamais envoyé au serveur).
+    */
+    'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:5173'), '/'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

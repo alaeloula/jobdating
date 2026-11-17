@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { z } from 'zod'
 import { useLogin } from '../auth/queries'
 import { SESSION_EXPIRED_MESSAGE, type LoginLocationState } from '../auth/types'
@@ -52,6 +52,8 @@ export default function LoginPage() {
         ? 'Une erreur est survenue. Réessayez dans quelques instants.'
         : null
   const showExpired = state?.expired === true && !login.isError
+  const showNotice = state?.notice !== undefined && !login.isError
+  const notActivated = login.error instanceof ApiError && login.error.code === 'account_not_activated'
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 lg:grid lg:grid-cols-2">
@@ -79,9 +81,23 @@ export default function LoginPage() {
             </p>
           )}
 
+          {showNotice && (
+            <p role="status" className="mt-4 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800">
+              {state?.notice}
+            </p>
+          )}
+
           {serverError && (
             <p role="alert" className="mt-4 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
               {serverError}
+              {notActivated && (
+                <>
+                  {' '}
+                  <Link to="/activation" className="font-semibold underline">
+                    Recevoir un nouveau lien d’activation
+                  </Link>
+                </>
+              )}
             </p>
           )}
 
@@ -120,6 +136,11 @@ export default function LoginPage() {
                 {...register('password')}
               />
               {errors.password && <p className="mt-1 text-sm text-red-700">{errors.password.message}</p>}
+              <p className="mt-2 text-right text-sm">
+                <Link to="/mot-de-passe-oublie" className="font-semibold text-indigo-700 hover:underline">
+                  Mot de passe oublié ?
+                </Link>
+              </p>
             </div>
 
             <button
