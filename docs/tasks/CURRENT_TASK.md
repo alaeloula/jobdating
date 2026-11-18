@@ -21,11 +21,13 @@ Contrats pour les tâches suivantes :
 Contrôles locaux (MySQL Docker démarré) :
 
 ```powershell
-# backend/
-vendor/bin/pint --test
+# racine du dépôt : tests et style dans Docker, PHP 8.4 (ENV-01, ≈ 5 min au lieu de 29)
+docker compose run --rm php php artisan test
+docker compose run --rm php vendor/bin/pint --test
+
+# backend/ (PHP sous Windows)
 vendor/bin/phpstan analyse
 php artisan migrate
-php artisan test
 php artisan queue:work   # pour recevoir les e-mails dans Mailpit (http://localhost:8025)
 
 # frontend/

@@ -1,5 +1,6 @@
 # Services de développement local uniquement (option B, docs/DECISIONS.md).
-# Laravel tourne avec Herd (PHP 8.4) ; Docker fournit MySQL 8 et Mailpit.
+# Le site tourne avec PHP sous Windows ; Docker fournit MySQL 8 et Mailpit. Les tests et outils
+# du backend se lancent dans le service « php » (PHP 8.4) : docker compose run --rm php php artisan test
 # Démarrer : docker compose up -d   ·   Arrêter : docker compose down
 # Ne pas utiliser en production : les identifiants ci-dessous sont des valeurs locales.
 
@@ -32,6 +33,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  # PHP 8.4 pour les tests et outils du backend (ENV-01), à côté de MySQL : pas de délai réseau
+  # Windows ↔ Docker. Ne démarre pas avec « up » (profil « outils ») ; s'utilise ainsi :
+  #   docker compose run --rm php php artisan test
+  php:
+    build: ./docker/php
+    profiles: ["outils"]
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      # Prioritaires sur backend/.env et phpunit.xml : MySQL est joint par le réseau Docker.
+      DB_HOST: mysql
+      DB_PORT: 3306
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   mailpit:
     image: axllent/mailpit:latest
