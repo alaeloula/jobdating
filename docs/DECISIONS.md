@@ -49,6 +49,8 @@ Ces décisions s'écartent du CDC V2. Elles priment sur les passages cités jusq
 | 12/11/2026 | Production : conteneurs Docker sur le serveur YouCode / 1337 qui héberge l'intranet, pour isoler JobDating des autres applications ; Dockerfiles à produire avec T-01 | Choix du responsable technique, détails en ARCH-01 |
 | 12/11/2026 | Lint frontend avec oxlint (installé à l'initialisation) au lieu d'ESLint + Prettier proposés dans ARCHITECTURE 1.2 | Initialisation |
 | 16/11/2026 | Journal d'audit non modifiable à deux niveaux : le modèle refuse modification et suppression ; des déclencheurs MySQL refusent toute modification et toute suppression de ligne de moins d’un an (seuil exact). Conteneur MySQL lancé avec `--log-bin-trust-function-creators=1` (création des déclencheurs par l'utilisateur applicatif, journalisation binaire active) ; même réglage à prévoir en production (T-01) | TRA-01, choix du responsable technique |
+| 18/11/2026 | Tests et outils du backend lancés dans Docker avec PHP 8.4 (service `php` de `docker-compose.yml`, profil « outils ») : `docker compose run --rm php php artisan test`. Même version et mêmes extensions que la CI. Raison : sous Windows, chaque requête des tests vers MySQL dans Docker prenait environ 45 ms (délai réseau) ; dans Docker, environ 1 ms. Suite complète : 29 min → 5 min. Le site local (port 8000) reste lancé avec PHP sous Windows | ENV-01 |
+| 18/11/2026 | Audit npm de la CI en deux étapes : **bloquant** sur les dépendances de production (`npm audit --audit-level=high --omit=dev`) ; **informatif, non bloquant** sur toutes les dépendances, outils de développement compris. Raison : faille de gravité élevée GHSA-fc5q-39xc-vjpf dans `picomatch` (utilisé seulement par Vite et Vitest), sans version corrigée ; la seule correction proposée rétrograde Vite (rupture de compatibilité). Le site livré n'est pas concerné (0 faille en production). À revoir quand un correctif sortira | Choix du responsable technique |
 
 ## Points ouverts
 
@@ -62,5 +64,5 @@ Ces décisions s'écartent du CDC V2. Elles priment sur les passages cités jusq
 | REP-02 | Anciennes rencontres `scheduled`, `in_progress`, `cancelled` : reprises ou ignorées | Reprise | PO |
 | REP-03 | Champ de notes historiques sur 5 à ajouter au modèle `evaluations` (CDC 8.8) | Modèle de données | TECH |
 | REP-04 | Calendrier : entreprises reprises avant l'événement, passages historiques après | Planning | PO, TECH |
-| ENV-01 | PHP 8.4 exact et MySQL 8 à valider en local (PHP 8.5 utilisé à l'initialisation) | Tests | TECH |
+| ENV-01 | PHP 8.4 exact et MySQL 8 à valider en local (PHP 8.5 utilisé à l'initialisation). **Réglé pour les tests le 18/11/2026** (PHP 8.4 dans Docker, décision technique du 18/11) ; reste ouvert pour le site local, encore lancé en PHP 8.5 sous Windows | Site local seulement | TECH |
 | COMP-01 | Saisie des compétences des apprenants par la CME (décision du 16/11) : prévoir une saisie en masse (plusieurs apprenants, une compétence) pour tenir avant la journée ? Source possible : plateforme CME (PC-26) | T-12, T-40 | PO, CME |

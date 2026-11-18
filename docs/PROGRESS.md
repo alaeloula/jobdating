@@ -230,3 +230,21 @@ Contre-revue Codex (`docs/reviews/REVIEW-T-05-contre-revue.md`, « À corriger a
 Mesure de la lenteur des tests locaux (17/11) : chaque requête SQL prend ≈ 44 ms en test contre 0,5 ms attendu ; cause confirmée : requêtes préparées réelles (réglage Laravel, 2 échanges par requête) entre PHP sous Windows et MySQL dans Docker (délai réseau d'environ 40 ms sur le second échange) ; mêmes requêtes en mode « émulé » (1 échange) : 0,5 ms. Le seeder des rôles et permissions (105 requêtes) coûte à lui seul ≈ 4,7 s par test. Piste : faire tourner PHP dans WSL ou Docker à côté de MySQL (ENV-01), plutôt que changer le mode des requêtes (comportement des types différent de la CI).
 
 Contrôles après la correction du constat 6 (17/11) : Pint et PHPStan sans erreur ; suite backend complète **309 tests réussis, 1312 assertions** (code de sortie 0).
+
+## 2026-11-18 — ENV-01 : tests du backend dans Docker (PHP 8.4)
+
+Cause mesurée le 17/11 : chaque requête des tests vers MySQL dans Docker prenait ≈ 45 ms depuis PHP sous Windows (requêtes préparées en deux échanges, délai réseau ≈ 40 ms) ; suite complète ≈ 29 min.
+
+Réalisé (branche `chore/ENV-01-php-docker`) :
+- `docker/php/Dockerfile` : image `php:8.4-cli`, extensions de la CI (`pdo_mysql`, `mbstring`, `intl`, `zip`), Composer, OPcache en ligne de commande sans revérification des fichiers (chaque `docker compose run` est un nouveau processus) ;
+- `docker-compose.yml` : service `php` (profil « outils », ne démarre pas avec `up`), dossier `backend/` partagé, MySQL joint par le réseau Docker (`mysql:3306`, prioritaire sur `.env` et `phpunit.xml`).
+
+Mesures dans Docker : requête préparée ≈ 1 ms (au lieu de 45) ; test courant ≈ 0,4 s (au lieu de 5,7) ; premier test ≈ 28 s (création de la base de test, une seule fois) ; **suite complète 309 tests réussis, 1312 assertions, en 308 s (≈ 5 min, 6 min avec le démarrage du conteneur) au lieu de 29 min** ; Pint réussi ; PHPStan sans erreur (≈ 4 min dans le conteneur, à cause du dossier partagé avec Windows : il peut rester lancé sous Windows).
+
+Commandes :
+- `docker compose run --rm php php artisan test`
+- `docker compose run --rm php vendor/bin/pint --test`
+
+ENV-01 : réglé pour les tests (PHP 8.4, comme la CI) ; reste ouvert pour le site local, encore en PHP 8.5 sous Windows.
+
+CI (18/11) : audit npm séparé en deux étapes (production bloquant, outils de développement informatif), à cause de la faille GHSA-fc5q-39xc-vjpf de `picomatch` sans correctif (décision technique du 18/11 dans `DECISIONS.md`).
