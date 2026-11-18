@@ -246,3 +246,5 @@ Commandes :
 - `docker compose run --rm php vendor/bin/pint --test`
 
 ENV-01 : réglé pour les tests (PHP 8.4, comme la CI) ; reste ouvert pour le site local, encore en PHP 8.5 sous Windows.
+
+CI (18/11) : audit npm séparé en deux étapes (production bloquant, outils de développement informatif), à cause de la faille GHSA-fc5q-39xc-vjpf de `picomatch` sans correctif (décision technique du 18/11 dans `DECISIONS.md`).
