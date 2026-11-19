@@ -261,7 +261,7 @@ describe('Entreprises', () => {
     renderAt('/entreprises')
 
     expect(await screen.findByRole('heading', { name: 'Tableau de bord de pilotage' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Entreprises' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Entreprises participantes' })).not.toBeInTheDocument()
     expect(calls.some((c) => c.url.startsWith('/api/v1/companies'))).toBe(false)
   })
 })

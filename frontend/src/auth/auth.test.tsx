@@ -198,7 +198,7 @@ describe('Gardes de route', () => {
     })
     renderApp('/entreprise')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Se déconnecter' }))
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Se déconnecter' }))[0])
 
     expect(await screen.findByRole('heading', { name: 'Connexion' })).toBeInTheDocument()
     expect(screen.getByTestId('location')).toHaveTextContent(/^\/login$/)
@@ -215,7 +215,7 @@ describe('Gardes de route', () => {
     })
     renderApp('/entreprise')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Se déconnecter' }))
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Se déconnecter' }))[0])
 
     expect(await screen.findByRole('alert')).toHaveTextContent('La déconnexion a échoué')
     expect(screen.getByRole('heading', { name: 'Tableau de bord entreprise' })).toBeInTheDocument()
@@ -230,7 +230,7 @@ describe('Gardes de route', () => {
     })
     renderApp('/entreprise')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Se déconnecter' }))
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Se déconnecter' }))[0])
 
     expect(await screen.findByRole('heading', { name: 'Connexion' })).toBeInTheDocument()
   })
@@ -271,7 +271,7 @@ describe('Gardes de route', () => {
       // Après la connexion : l'écran de connexion est fermé, son envoi n'est plus conservé.
       await waitFor(() => expect(mutationsRetain(queryClient, password)).toBe(false))
 
-      fireEvent.click(screen.getByRole('button', { name: 'Se déconnecter' }))
+      fireEvent.click(screen.getAllByRole('button', { name: 'Se déconnecter' })[0])
       expect(await screen.findByRole('heading', { name: 'Connexion' })).toBeInTheDocument()
 
       await waitFor(() => {
@@ -297,7 +297,7 @@ describe('Gardes de route', () => {
     })
     renderApp('/entreprise')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Se déconnecter' }))
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Se déconnecter' }))[0])
     await fillAndSubmit('compte@example.test', 'mot-de-passe-fictif')
 
     expect(await screen.findByRole('heading', { name: 'Ma journée' })).toBeInTheDocument()

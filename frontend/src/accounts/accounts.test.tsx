@@ -78,7 +78,7 @@ describe('Comptes CME et Direction', () => {
     renderAt('/comptes')
 
     expect(await screen.findByRole('heading', { name: 'Comptes CME et Direction' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Comptes' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Comptes CME et Direction' })).toBeInTheDocument()
     expect(await screen.findByText('Invitation envoyée')).toBeInTheDocument()
 
     const self = screen.getByText('Prénom Admin').closest('tr') as HTMLElement
@@ -188,7 +188,7 @@ describe('Comptes CME et Direction', () => {
     renderAt('/comptes')
 
     expect(await screen.findByRole('heading', { name: 'Tableau de bord de pilotage' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Comptes' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Comptes CME et Direction' })).not.toBeInTheDocument()
     expect(calls.some((c) => c.url.startsWith('/api/v1/users'))).toBe(false)
   })
 })
