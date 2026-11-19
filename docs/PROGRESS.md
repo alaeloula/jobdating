@@ -248,3 +248,25 @@ Commandes :
 ENV-01 : réglé pour les tests (PHP 8.4, comme la CI) ; reste ouvert pour le site local, encore en PHP 8.5 sous Windows.
 
 CI (18/11) : audit npm séparé en deux étapes (production bloquant, outils de développement informatif), à cause de la faille GHSA-fc5q-39xc-vjpf de `picomatch` sans correctif (décision technique du 18/11 dans `DECISIONS.md`).
+
+## 2026-11-18 — T-10 (JD-15) : gestion des comptes de l'équipe
+
+Mode de revue choisi par le responsable technique : pas de revue du plan, une revue du code par Codex. Réponses du 18/11 : écran limité aux comptes CME, Direction et administrateur (entreprises T-11, apprenants T-12) ; suppression et restauration incluses (absentes de la maquette) ; on ne peut ni supprimer, ni désactiver, ni changer le rôle de son propre compte, et il reste toujours au moins un administrateur actif ; réinitialisation par l'administrateur (mot de passe généré affiché une fois, avec « Copier », et envoyé par e-mail) ; photo hors périmètre.
+
+Réalisé :
+- `StaffAccountService` : création (compte non activé, mot de passe inutilisable, lien d'activation après validation de la transaction), modification (rôle unique), désactivation / réactivation, suppression logique / restauration, renvoi du lien, réinitialisation ; ligne du compte relue sous verrou ; protections (propre compte, dernier administrateur actif, administrateurs verrouillés pendant le contrôle) ; désactivation et suppression : sessions fermées et liens annulés (RG-ACC-05) ;
+- `PasswordGenerator` : 16 caractères sans caractères ambigus, conformes à `StrongPassword` (réutilisable par T-11 / T-12) ; `GeneratedPasswordNotification` mise en file chiffrée, après validation ;
+- API `/api/v1/users` (permission `users.manage`, administrateur seul) : liste paginée (25) avec recherche, filtres rôle et statut (« Supprimés » à part), création, modification, désactivation, réactivation, suppression, restauration, renvoi du lien, réinitialisation (`Cache-Control: no-store`) ; un compte entreprise ou apprenant est traité comme inexistant (404) ;
+- journal : actions existantes (création, modification, rôle, désactivation, réactivation, suppression, restauration) ; réinitialisation : `account.password_reset` avec l'administrateur comme auteur, note « Réinitialisé par l'administrateur », jamais le mot de passe ;
+- écran « Comptes CME et Direction » (`/comptes`, maquette admin-10) et lien « Comptes » pour `users.manage` ; mot de passe réinitialisé gardé hors du cache TanStack.
+
+Contrôles (18/11) : tests T-10 20 réussis (Docker) ; frontend lint, 50 tests et build réussis ; navigateur avec le compte administrateur de démonstration : liste, création d'un compte fictif `recette.direction@jobdating.test` (e-mail d'activation dans Mailpit), réinitialisation du compte fictif `recette.cme@` (mot de passe affiché une fois, e-mail reçu).
+Suite backend complète dans Docker : **329 tests réussis, 1503 assertions**, ≈ 4 min ; Pint et PHPStan sans erreur.
+
+Revue du code par Codex (`docs/reviews/REVIEW-T-10-utilisateurs.md`, « À corriger avant fusion »), toutes corrigées (choix du responsable technique : pas de contre-revue) :
+- constat 1 (Majeur) : une invitation d'administrateur non activée comptait comme administrateur actif ; seuls les administrateurs activés, non désactivés, non supprimés comptent ; retirer une invitation n'est plus bloqué ; test ;
+- constat 2 (Mineur) : interblocage MySQL quand deux administrateurs agissent l'un sur l'autre ; transactions rejouées jusqu'à 3 fois (`DB::transaction(…, 3)`), règle réévaluée sur l'état relu ; non testé en parallèle réel (deux processus) ;
+- constat 3 (Mineur) : un échec de chargement affichait « Aucun compte. » ; message « La liste des comptes n'a pas pu être chargée » et bouton « Réessayer » ; test ;
+- constat 4 (Mineur) : la recherche « 0 » était ignorée (`empty()`) ; test.
+
+Contrôles : tests T-10 22 réussis ; suite complète dans Docker **331 tests réussis, 1508 assertions** (≈ 4 min) ; Pint, PHPStan, lint, 51 tests frontend et build réussis.
