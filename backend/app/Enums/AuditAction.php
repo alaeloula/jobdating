@@ -26,6 +26,10 @@ enum AuditAction: string
     case AccountActivated = 'account.activated';
     case PasswordReset = 'account.password_reset';
     case PasswordChanged = 'account.password_changed';
+    case CompanyCreated = 'company.created';
+    case CompanyUpdated = 'company.updated';
+    case CompanyProfilesUpdated = 'company.profiles_updated';
+    case CompanyCredentialsPrinted = 'company.credentials_printed';
 
     case ReferentialCreated = 'referential.created';
     case ReferentialUpdated = 'referential.updated';
@@ -41,6 +45,8 @@ enum AuditAction: string
             self::AccountDeleted, self::AccountRestored, self::RoleChanged, self::ActivationLinkSent,
             self::PasswordResetLinkSent, self::LinkEmailFailed, self::AccountActivated, self::PasswordReset,
             self::PasswordChanged => AuditCategory::Comptes,
+            self::CompanyCreated, self::CompanyUpdated, self::CompanyProfilesUpdated,
+            self::CompanyCredentialsPrinted => AuditCategory::Entreprises,
             self::ReferentialCreated, self::ReferentialUpdated, self::ReferentialDeactivated,
             self::ReferentialReactivated, self::ReferentialReordered => AuditCategory::Referentiels,
         };
@@ -66,6 +72,10 @@ enum AuditAction: string
             self::AccountActivated => 'Compte activé',
             self::PasswordReset => 'Mot de passe réinitialisé',
             self::PasswordChanged => 'Mot de passe changé',
+            self::CompanyCreated => 'Entreprise créée',
+            self::CompanyUpdated => 'Fiche entreprise modifiée',
+            self::CompanyProfilesUpdated => 'Profils recherchés modifiés',
+            self::CompanyCredentialsPrinted => 'Fiche de connexion imprimée',
             self::ReferentialCreated => 'Référentiel : valeur ajoutée',
             self::ReferentialUpdated => 'Référentiel : valeur modifiée',
             self::ReferentialDeactivated => 'Référentiel : valeur désactivée',

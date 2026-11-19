@@ -4,6 +4,7 @@ import AppLayout from './layout/AppLayout'
 import AccountsPage from './pages/AccountsPage'
 import ActivationPage from './pages/ActivationPage'
 import AuditLogPage from './pages/AuditLogPage'
+import CompaniesPage from './pages/CompaniesPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
@@ -54,6 +55,7 @@ export default function AppRoutes() {
             </Route>
             <Route element={<RequireAuth roles={['administrateur', 'cme']} />}>
               <Route path="/referentiels" element={<ReferentialsPage />} />
+              <Route path="/entreprises" element={<CompaniesPage />} />
             </Route>
             <Route element={<RequireAuth roles={['entreprise']} />}>
               <Route path="/entreprise" element={<HomePage title="Tableau de bord entreprise" />} />

@@ -100,7 +100,9 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     Accept: 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   }
-  if (body !== undefined) {
+  // Fichier (FormData, ex. logo d'entreprise) : le navigateur fixe lui-même l'en-tête multipart.
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData
+  if (body !== undefined && !isForm) {
     headers['Content-Type'] = 'application/json'
   }
   const xsrf = readCookie('XSRF-TOKEN')
@@ -114,7 +116,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
       method,
       headers,
       credentials: 'same-origin',
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
     })
   } catch {
     throw new ApiError(0, NETWORK_ERROR_MESSAGE, { code: 'network_error' })

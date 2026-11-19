@@ -37,6 +37,8 @@ class PermissionMatrixTest extends TestCase
         'program.manage' => [true, true, false, false, false],           // Gérer le programme de l'événement
         'participants.manage' => [true, false, false, false, false],     // Ajouter ou retirer des participants
         'locations.manage' => [true, true, false, false, false],         // Saisir l'emplacement des entreprises
+        'companies.manage' => [true, false, false, false, false],        // Gérer les entreprises (décision du 19/11)
+        'companies.profiles.manage' => [true, true, false, false, false], // Profils recherchés (RG-ENTR-08, 19/11)
         'program.view' => [true, true, true, true, true],                // Consulter le programme
         'learners.view' => [true, true, true, false, true],              // Consulter la liste des apprenants
         'cv.view' => [true, true, true, true, true],                     // Consulter et télécharger un CV validé

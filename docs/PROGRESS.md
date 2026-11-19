@@ -270,3 +270,38 @@ Revue du code par Codex (`docs/reviews/REVIEW-T-10-utilisateurs.md`, « À corri
 - constat 4 (Mineur) : la recherche « 0 » était ignorée (`empty()`) ; test.
 
 Contrôles : tests T-10 22 réussis ; suite complète dans Docker **331 tests réussis, 1508 assertions** (≈ 4 min) ; Pint, PHPStan, lint, 51 tests frontend et build réussis.
+
+## 2026-11-19 — T-11 (JD-16) : entreprises
+
+Préparation : plan (`docs/tasks/PLAN-T-11.md`) revu par Codex (`docs/reviews/REVIEW-PLAN-T-11.md`, « Plan à revoir » : version des fiches, atomicité du logo, propositions d'identifiant, valeurs inactives, identité du compte), version 2 validée par le responsable technique sans contre-revue du plan. Décisions du 19/11 : événement et emplacement reportés à T-14 (emplacement facultatif) ; CME : profils recherchés (et emplacements dans T-14) ; logo inclus ; import → T-13, export → T-61 ; désactivation sans suppression ; présentation modifiable par l'entreprise ; RG-ENTR-08 remplace PC-14 (`DECISIONS.md`) ; « Fiche imprimée » = confirmation par l'administrateur.
+
+Réalisé :
+- tables `companies`, `company_filiere`, `company_competence`, `company_recruiters` ; modèles `Company`, `CompanyRecruiter` ;
+- permissions `companies.manage` (administrateur) et `companies.profiles.manage` (administrateur, CME) ; matrice mise à jour ;
+- `UsernameSuggester` (RG-ENTR-04 : nom simplifié, chiffre en cas de doublon, comptes supprimés compris, toujours 3 à 50 caractères) ; `CompanyService` : création (compte entreprise activé, mot de passe généré renvoyé une fois avec la version de la fiche, aucun e-mail), modification (secteur inactif conservé, nouveau secteur actif exigé), logo (validé avant tout effet, stocké avant la transaction, supprimé si elle échoue, ancien supprimé après validation ; stockage **privé** servi par `GET /companies/{id}/logo` aux utilisateurs autorisés, au lieu d'un stockage public : aucun lien symbolique à créer), désactivation / réactivation (sessions fermées), réinitialisation (toutes les sessions fermées, nouvelle version, aucun e-mail), confirmation d'impression liée à la version courante (409 pour une ancienne fiche, idempotente), profils recherchés (nouvelle valeur active exigée, association devenue inactive conservée) ;
+- API `/api/v1/companies` (liste, fiche, proposition d'identifiant, création multipart, modification, logo, désactivation, réactivation, réinitialisation, confirmation d'impression, profils) et `/api/v1/me/company` (présentation de l'entreprise connectée) ;
+- journal : catégorie « Entreprises » (8 catégories) et actions `company.created`, `company.updated`, `company.profiles_updated`, `company.credentials_printed` ; réinitialisation journalisée sur le compte avec l'administrateur comme auteur ;
+- frontend : écran « Entreprises » (`/entreprises`, administrateur et CME), formulaire (maquette admin-04 sans événement), fiche de connexion imprimable (admin-05, feuille d'impression limitée à la fiche), profils recherchés avec le bandeau et recruteurs en consultation, « Présentation » dans « Mon profil » de l'entreprise ; `apiRequest` accepte un `FormData` ;
+- `DemoAccountsSeeder` : fiche « Entreprise Démo » pour le compte `entreprise-demo`.
+
+Passage de relais à T-14 : les entreprises créées par T-11 (dont la démonstration) n'ont aucune participation ; T-14 doit permettre leur première participation et garder l'emplacement facultatif. Le critère ADM-02 « apparaît parmi les participants » est différé.
+
+Contrôles (19/11) : tests T-11 23 réussis (Docker) ; frontend lint, 56 tests et build réussis ; navigateur (administrateur de démonstration) : création d'une entreprise fictive « Recette Société Fictive » (identifiant `recette-societe-fictive` proposé), fiche affichée, impression confirmée (« Imprimée »).
+Suite backend complète dans Docker : **364 tests réussis, 1719 assertions** (≈ 5 min) ; Pint et PHPStan sans erreur.
+
+Revue du code par Codex (`docs/reviews/REVIEW-T-11-entreprises.md`, 3 constats). Décisions du responsable technique (19/11) :
+- constat 1 (nettoyage des logos et transaction englobante) : corrigé ; l'ancien logo est supprimé après le commit final (`DB::afterCommit`), le nouveau est supprimé si la transaction englobante est annulée (`DB::afterRollBack` enregistré avant la transaction interne) ; utile pour T-13 (import dans une transaction) ;
+- constat 2 (état « impression confirmée » réutilisé par la fiche suivante) : corrigé, la fiche est remontée pour chaque version ;
+- constat 3 (profils ignorés à la création), option (a) : profils refusés à la création (422), saisis ensuite par « Profils recherchés » ; plan mis à jour.
+Après la recette du responsable technique : logo rond de 48 px (ou initiales) et profils recherchés en badges dans la liste.
+Contrôles après corrections (19/11) : Pint et PHPStan sans erreur ; frontend lint, 58 tests et build réussis ; suite backend complète dans Docker : 366 tests : 365 réussis, 1 échec (`test_profils_refuses_a_la_creation` : la règle `prohibited` accepte une liste vide) ; correction par la règle `missing` (champ refusé dès qu'il est envoyé, même vide), puis `tests/Feature/Companies` relancé : **25 tests réussis** (suite complète non relancée après ce changement limité à la validation de `store`). Contre-revue Codex : `docs/reviews/PROMPT-CODEX-CONTRE-REVUE-T-11.md`.
+
+Contre-revue Codex (`docs/reviews/REVIEW-T-11-contre-revue.md`, « À fusionner après corrections mineures ») : constats 2 et 3 corrigés, constat 1 partiellement corrigé. Décisions du responsable technique (19/11) :
+- constat 4 (fichier orphelin avec deux niveaux de transaction englobante), option (a) : la double suppression après un échec interne est corrigée (suppression du nouveau fichier exécutée une seule fois, partagée entre le `catch` et le rappel d'annulation) ; le cas « niveau intermédiaire validé puis niveau supérieur annulé » est un **passage de relais à T-13** (ci-dessous) ;
+- constat 5 : initiales affichées si le logo ne se charge pas ;
+- constat 6 : contraste renforcé de « Aucun profil recherché » et des badges inactifs (`slate-600`) ;
+- défaut trouvé pendant la recette du responsable technique (non signalé par les revues) : le message d'erreur du logo restait affiché après le choix d'un autre fichier ; il disparaît désormais dès qu'un nouveau fichier est choisi.
+
+Passage de relais à T-13 (import des entreprises) : si l'import appelle `CompanyService::create()` ou `replaceLogo()` sous **deux** niveaux de transaction englobante, et que le niveau intermédiaire est validé puis le niveau supérieur annulé, le nouveau logo reste orphelin sur le disque privé (données et ancien logo corrects). T-13 doit soit appeler le service sous un seul niveau englobant, soit étendre le nettoyage, et ajouter un test de ce scénario (contre-revue Codex T-11, constat 4).
+
+Contrôles après la contre-revue (19/11) : Pint et PHPStan sans erreur ; frontend lint, **60 tests** et build réussis (les 2 nouveaux tests échouent sans les corrections) ; suite backend complète dans Docker : **367 tests réussis, 1741 assertions** (≈ 4 min 30).

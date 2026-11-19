@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useMe } from '../auth/queries'
+import CompanyPresentation from '../companies/CompanyPresentation'
 import { ApiError, apiRequest } from '../lib/api'
 import { Alert } from '../passwords/components'
 import { errorMessage, inputClass } from '../passwords/form'
@@ -87,6 +88,8 @@ export default function ProfilePage() {
           <dd>{user.role_label}</dd>
         </dl>
       </section>
+
+      {user.role === 'entreprise' && <CompanyPresentation username={user.username} />}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5" aria-labelledby="password-title">
         <h2 id="password-title" className="text-lg font-bold">

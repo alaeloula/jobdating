@@ -35,6 +35,11 @@ export default function AppLayout() {
                 <NavLink to={user.home} className={navClass} end>
                   Accueil
                 </NavLink>
+                {(user.permissions.includes('companies.manage') || user.permissions.includes('companies.profiles.manage')) && (
+                  <NavLink to="/entreprises" className={navClass}>
+                    Entreprises
+                  </NavLink>
+                )}
                 {user.permissions.includes(USERS_MANAGE) && (
                   <NavLink to="/comptes" className={navClass}>
                     Comptes

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\Role;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -66,6 +67,11 @@ class DemoAccountsSeeder extends Seeder
             ])->save();
 
             $user->setRole($account['role']);
+
+            // Fiche de l'entreprise de démonstration (T-11), sans événement (affectation : T-14).
+            if ($account['role'] === Role::Entreprise && ! Company::query()->where('user_id', $user->getKey())->exists()) {
+                Company::query()->forceCreate(['user_id' => $user->getKey(), 'name' => 'Entreprise Démo', 'credentials_version' => 1]);
+            }
         }
     }
 }
