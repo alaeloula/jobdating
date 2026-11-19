@@ -160,7 +160,8 @@ export default function CompaniesPage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_24rem]">
+      {/* Colonne de droite seulement quand un formulaire ou une fiche est ouvert : la liste prend sinon toute la largeur. */}
+      <div className={`grid gap-4 ${panel || sheet ? 'lg:grid-cols-[minmax(0,1fr)_24rem]' : ''}`}>
         <section className="space-y-3">
           <div className="flex flex-wrap gap-2">
             <input

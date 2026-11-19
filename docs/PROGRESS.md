@@ -305,3 +305,24 @@ Contre-revue Codex (`docs/reviews/REVIEW-T-11-contre-revue.md`, « À fusionner 
 Passage de relais à T-13 (import des entreprises) : si l'import appelle `CompanyService::create()` ou `replaceLogo()` sous **deux** niveaux de transaction englobante, et que le niveau intermédiaire est validé puis le niveau supérieur annulé, le nouveau logo reste orphelin sur le disque privé (données et ancien logo corrects). T-13 doit soit appeler le service sous un seul niveau englobant, soit étendre le nettoyage, et ajouter un test de ce scénario (contre-revue Codex T-11, constat 4).
 
 Contrôles après la contre-revue (19/11) : Pint et PHPStan sans erreur ; frontend lint, **60 tests** et build réussis (les 2 nouveaux tests échouent sans les corrections) ; suite backend complète dans Docker : **367 tests réussis, 1741 assertions** (≈ 4 min 30).
+
+## 2026-11-19 — Navigation de l'interface (branche `chore/ui-navigation`, hors backlog)
+
+Demande du responsable technique après la recette de T-11 : rendre la navigation plus lisible. Décisions du 19/11 : suivre les maquettes plutôt que des menus groupés (admin-01, entreprise-01, entreprise-ordi-01, apprenant-01) ; seuls les écrans déjà développés apparaissent (chaque tâche ajoutera son lien) ; icônes dessinées en SVG, **sans nouvelle dépendance** ; libellés des maquettes (« Entreprises participantes », « Comptes CME et Direction », « Profil entreprise »).
+
+Réalisé (frontend seulement, aucun changement de droits ni d'API) :
+- administrateur, CME, Direction : barre latérale (« JobDating » ramène à l'accueil ; nom, rôle, « Mon profil » et « Se déconnecter » en bas) ; sur mobile, ouverture par le bouton ☰, fermeture par un lien, « Fermer le menu », Échap ou un clic à côté ;
+- entreprise : barre latérale avec icônes sur ordinateur, onglets en bas sur mobile (même navigation) ; déconnexion en haut sur mobile, en bas de la barre sur ordinateur ;
+- apprenant : onglets en bas sur toutes les tailles (aucune maquette sur ordinateur : hypothèse validée par le responsable technique) ; « Mon profil » et déconnexion dans le menu du compte (initiales en haut à droite), car les maquettes ne les montrent pas ;
+- « Entreprises » : la colonne de droite n'apparaît que lorsqu'un formulaire ou une fiche est ouvert.
+
+Hypothèses : sous-titres « Espace CME » et « Espace Direction » (seul « Administration » figure sur la maquette admin-01) ; le titre de la page reste « Entreprises » alors que le lien s'appelle « Entreprises participantes » (la notion de participation arrive avec T-14). Hors périmètre : encadré de l'événement et compteur de « Mes passages » (entreprise-ordi-01), en attente de T-14 et des passages.
+
+Contrôles (19/11) : frontend lint, **70 tests** (dont 10 de navigation : liens par rôle, lien actif, menu mobile, menu du compte) et build réussis ; navigateur (administrateur de démonstration) : barre latérale à 1 280 px, menu ☰ à 766 px. Espaces entreprise et apprenant non vérifiés dans le navigateur (couverts par les tests).
+
+Revue du code par Codex (`docs/reviews/REVIEW-UI-NAVIGATION.md`, « À fusionner après corrections mineures »). Décisions du responsable technique (19/11) :
+- constat 1 (menu ouvert qui cache le message d'échec de déconnexion) : corrigé, le menu ☰ ou le menu du compte se referme en cas d'échec et le focus revient à son bouton ;
+- constat 2 (menu du compte de l'apprenant rouvert après un aller-retour entre pages) : corrigé, les menus sont réellement refermés à chaque changement de page ;
+- débordement horizontal de « Entreprises » à 375 px (défaut antérieur, signalé par Codex) : reporté dans `docs/ERREURS_A_CORRIGER.md` (E-04, T-49).
+
+Contrôles après corrections (19/11) : frontend lint, **72 tests** (dont 12 de navigation ; les nouveaux scénarios échouent sans les corrections) et build réussis.

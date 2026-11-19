@@ -304,7 +304,9 @@ describe('Mon profil', () => {
       mockApi(() => user(role), () => undefined)
       renderAt(HOMES[role])
 
-      fireEvent.click(await screen.findByRole('link', { name: 'Mon profil' }))
+      // Entreprise : « Profil entreprise » (entreprise-ordi-01) ; apprenant : menu du compte.
+      if (role === 'apprenant') fireEvent.click(await screen.findByRole('button', { name: 'Menu du compte' }))
+      fireEvent.click(await screen.findByRole('link', { name: role === 'entreprise' ? 'Profil entreprise' : 'Mon profil' }))
       expect(await screen.findByRole('heading', { name: 'Changer mon mot de passe' })).toBeInTheDocument()
     },
   )
