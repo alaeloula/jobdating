@@ -4,6 +4,10 @@ namespace Database\Seeders;
 
 use App\Enums\Role;
 use App\Models\Company;
+use App\Models\Learner;
+use App\Models\Referentials\Campus;
+use App\Models\Referentials\Promotion;
+use App\Models\Referentials\SchoolClass;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -27,6 +31,9 @@ use Illuminate\Database\Seeder;
 class DemoAccountsSeeder extends Seeder
 {
     public const PASSWORD = 'Demo-JobDating-2026';
+
+    /** CNIE FICTIVE de l'apprenant de démonstration (format de App\Support\Cnie). */
+    public const DEMO_CNIE = 'DEMO00001';
 
     /**
      * @var list<array{role: Role, first_name: string, last_name: string, email: ?string, username: ?string}>
@@ -72,6 +79,44 @@ class DemoAccountsSeeder extends Seeder
             if ($account['role'] === Role::Entreprise && ! Company::query()->where('user_id', $user->getKey())->exists()) {
                 Company::query()->forceCreate(['user_id' => $user->getKey(), 'name' => 'Entreprise Démo', 'credentials_version' => 1]);
             }
+
+            if ($account['role'] === Role::Apprenant) {
+                $this->learnerRecord($user);
+            }
         }
+    }
+
+    /**
+     * Fiche de l'apprenant de démonstration (T-12), sans événement (inscription : T-14). Elle exige
+     * un campus, une promotion et une classe ACTIFS : sans eux, elle est ignorée avec un message
+     * (aucune valeur officielle n'est créée implicitement, plan T-12 v2).
+     */
+    private function learnerRecord(User $user): void
+    {
+        if (Learner::query()->where('user_id', $user->getKey())->exists()) {
+            return;
+        }
+
+        $campus = Campus::query()->where('active', true)->orderBy('id')->first();
+        $promotion = Promotion::query()->where('active', true)->orderBy('id')->first();
+        $class = SchoolClass::query()->where('active', true)->orderBy('id')->first();
+        if ($campus === null || $promotion === null || $class === null) {
+            $this->command?->warn('Fiche de l’apprenant de démonstration ignorée : ajoutez d’abord un campus, une promotion et une classe actifs (Référentiels).');
+
+            return;
+        }
+        if (Learner::query()->where('cnie', self::DEMO_CNIE)->exists()) {
+            $this->command?->warn('Fiche de l’apprenant de démonstration ignorée : la CNIE fictive est déjà utilisée.');
+
+            return;
+        }
+
+        Learner::query()->forceCreate([
+            'user_id' => $user->getKey(),
+            'cnie' => self::DEMO_CNIE,
+            'campus_id' => $campus->id,
+            'promotion_id' => $promotion->id,
+            'class_id' => $class->id,
+        ]);
     }
 }

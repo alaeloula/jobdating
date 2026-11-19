@@ -60,6 +60,8 @@ enum Role: string
                 Permission::CvView,
                 Permission::CompaniesView,
                 Permission::CompaniesProfilesManage,
+                Permission::LearnersCompetencesManage,
+                Permission::LearnersViewCnie,
                 Permission::EvaluationsView,
                 Permission::DashboardGlobal,
                 Permission::StatsCompanies,
@@ -72,6 +74,7 @@ enum Role: string
             self::Direction => [
                 Permission::ProgramView,
                 Permission::LearnersView,
+                Permission::LearnersViewCnie,
                 Permission::CvView,
                 Permission::CompaniesView,
                 Permission::EvaluationsView,

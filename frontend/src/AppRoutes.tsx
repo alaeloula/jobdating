@@ -7,6 +7,7 @@ import AuditLogPage from './pages/AuditLogPage'
 import CompaniesPage from './pages/CompaniesPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import HomePage from './pages/HomePage'
+import LearnersPage from './pages/LearnersPage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
 import ReferentialsPage from './pages/ReferentialsPage'
@@ -48,6 +49,7 @@ export default function AppRoutes() {
             <Route path="/profil" element={<ProfilePage />} />
             <Route element={<RequireAuth roles={['administrateur', 'cme', 'direction']} />}>
               <Route path="/pilotage" element={<HomePage title="Tableau de bord de pilotage" />} />
+              <Route path="/apprenants" element={<LearnersPage />} />
             </Route>
             <Route element={<RequireAuth roles={['administrateur']} />}>
               <Route path="/journal-audit" element={<AuditLogPage />} />
