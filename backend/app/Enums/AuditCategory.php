@@ -15,10 +15,12 @@ enum AuditCategory: string
     case Cnie = 'cnie';
     case ImportsExports = 'imports_exports';
     case Referentiels = 'referentiels';
+    case Entreprises = 'entreprises';
 
     public function label(): string
     {
         return match ($this) {
+            self::Entreprises => 'Entreprises',
             self::Connexions => 'Connexions',
             self::Comptes => 'Comptes et mots de passe',
             self::Passages => 'Passages et évaluations',

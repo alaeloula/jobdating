@@ -12,6 +12,8 @@ use App\Http\Controllers\Auth\MeController;
 use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\PasswordLinkRequestController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\MyCompanyController;
 use App\Http\Controllers\ReferentialController;
 use App\Http\Controllers\StaffAccountController;
 use Illuminate\Support\Facades\Route;
@@ -63,6 +65,36 @@ Route::middleware(['auth:sanctum', 'session.valid'])->group(function () {
         Route::post('/users/{id}/reset-password', [StaffAccountController::class, 'resetPassword'])->whereNumber('id')
             ->middleware('no.store')->name('users.reset-password');
     });
+
+    // Entreprises (ADM-02, T-11). Liste, fiche et profils recherchés : administrateur et CME ;
+    // gestion du compte et des identifiants : administrateur.
+    $manage = 'permission:'.Permission::CompaniesManage->value;
+    $read = 'permission:'.Permission::CompaniesManage->value.'|'.Permission::CompaniesProfilesManage->value;
+
+    Route::get('/companies', [CompanyController::class, 'index'])->middleware($read)->name('companies.index');
+    Route::get('/companies/username-suggestion', [CompanyController::class, 'usernameSuggestion'])->middleware($manage)->name('companies.username-suggestion');
+    Route::get('/companies/{id}', [CompanyController::class, 'show'])->whereNumber('id')->middleware($read)->name('companies.show');
+    Route::put('/companies/{id}/profiles', [CompanyController::class, 'profiles'])->whereNumber('id')
+        ->middleware('permission:'.Permission::CompaniesProfilesManage->value)->name('companies.profiles');
+    Route::get('/companies/{id}/logo', [CompanyController::class, 'logo'])->whereNumber('id')
+        ->middleware('permission:'.Permission::CompaniesView->value.'|'.Permission::CompaniesManage->value)->name('companies.logo');
+
+    Route::middleware($manage)->group(function () {
+        Route::post('/companies', [CompanyController::class, 'store'])->middleware('no.store')->name('companies.store');
+        Route::patch('/companies/{id}', [CompanyController::class, 'update'])->whereNumber('id')->name('companies.update');
+        Route::post('/companies/{id}/logo', [CompanyController::class, 'storeLogo'])->whereNumber('id')->name('companies.logo.store');
+        Route::delete('/companies/{id}/logo', [CompanyController::class, 'destroyLogo'])->whereNumber('id')->name('companies.logo.destroy');
+        Route::post('/companies/{id}/deactivate', [CompanyController::class, 'deactivate'])->whereNumber('id')->name('companies.deactivate');
+        Route::post('/companies/{id}/reactivate', [CompanyController::class, 'reactivate'])->whereNumber('id')->name('companies.reactivate');
+        Route::post('/companies/{id}/reset-password', [CompanyController::class, 'resetPassword'])->whereNumber('id')
+            ->middleware('no.store')->name('companies.reset-password');
+        Route::post('/companies/{id}/credentials-printed', [CompanyController::class, 'credentialsPrinted'])->whereNumber('id')
+            ->name('companies.credentials-printed');
+    });
+
+    // Fiche de l'entreprise connectée (ENT-08) : description et site web.
+    Route::get('/me/company', [MyCompanyController::class, 'show'])->name('me.company');
+    Route::put('/me/company', [MyCompanyController::class, 'update'])->name('me.company.update');
 
     // Référentiels (ADM-09). Lecture des options : tout utilisateur connecté.
     Route::get('/referentials/{type}/options', [ReferentialController::class, 'options'])->name('referentials.options');

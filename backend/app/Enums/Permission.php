@@ -47,6 +47,12 @@ enum Permission: string
     /** Consulter les entreprises. */
     case CompaniesView = 'companies.view';
 
+    /** Créer et gérer les entreprises : fiche, identifiants, désactivation (T-11, décision du 19/11/2026). */
+    case CompaniesManage = 'companies.manage';
+
+    /** Saisir les profils recherchés d'une entreprise (RG-ENTR-08, décision du 19/11/2026). */
+    case CompaniesProfilesManage = 'companies.profiles.manage';
+
     /** Enregistrer un passage. */
     case PassagesCreate = 'passages.create';
 

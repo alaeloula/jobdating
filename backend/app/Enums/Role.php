@@ -59,6 +59,7 @@ enum Role: string
                 Permission::LearnersView,
                 Permission::CvView,
                 Permission::CompaniesView,
+                Permission::CompaniesProfilesManage,
                 Permission::EvaluationsView,
                 Permission::DashboardGlobal,
                 Permission::StatsCompanies,
