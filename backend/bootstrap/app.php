@@ -27,6 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Sanctum en mode session par cookie pour l'application React (CDC 9.5).
         $middleware->statefulApi();
 
+        // CNIE (décision 9 du 19/11/2026) : seuls les espaces sont retirés, par App\Support\Cnie ;
+        // un retour à la ligne ou une tabulation est REFUSÉ, jamais supprimé en silence (revue T-12, constat 5).
+        $middleware->trimStrings(except: ['cnie']);
+
         // Backend en API seule : un visiteur non connecté reçoit une erreur 401, jamais une redirection.
         $middleware->redirectGuestsTo(fn (Request $request) => null);
 

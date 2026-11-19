@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\PasswordLinkRequestController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\LearnerController;
 use App\Http\Controllers\MyCompanyController;
 use App\Http\Controllers\ReferentialController;
 use App\Http\Controllers\StaffAccountController;
@@ -90,6 +91,31 @@ Route::middleware(['auth:sanctum', 'session.valid'])->group(function () {
             ->middleware('no.store')->name('companies.reset-password');
         Route::post('/companies/{id}/credentials-printed', [CompanyController::class, 'credentialsPrinted'])->whereNumber('id')
             ->name('companies.credentials-printed');
+    });
+
+    // Apprenants (ADM-03, T-12). Limités aux RÔLES administrateur, CME et Direction : l'entreprise
+    // a `learners.view` pour T-23 (participants de ses événements) et n'accède jamais à ces routes.
+    Route::middleware(['role:administrateur|cme|direction', 'permission:'.Permission::LearnersView->value])->group(function () {
+        Route::post('/learners/search', [LearnerController::class, 'search'])->name('learners.search');
+        Route::get('/learners/{id}', [LearnerController::class, 'show'])->whereNumber('id')->name('learners.show');
+
+        Route::middleware('permission:'.Permission::LearnersCompetencesManage->value)->group(function () {
+            Route::post('/learners/selection/count', [LearnerController::class, 'selectionCount'])->name('learners.selection.count');
+            Route::put('/learners/{id}/competences', [LearnerController::class, 'competences'])->whereNumber('id')->name('learners.competences');
+            Route::post('/learners/bulk-competences', [LearnerController::class, 'bulkCompetences'])->name('learners.bulk-competences');
+        });
+
+        Route::middleware('permission:'.Permission::LearnersUpdate->value)->group(function () {
+            Route::post('/learners', [LearnerController::class, 'store'])->middleware('no.store')->name('learners.store');
+            Route::put('/learners/{id}', [LearnerController::class, 'update'])->whereNumber('id')->name('learners.update');
+            Route::post('/learners/{id}/reset-password', [LearnerController::class, 'resetPassword'])->whereNumber('id')
+                ->middleware('no.store')->name('learners.reset-password');
+            Route::post('/learners/{id}/deactivate', [LearnerController::class, 'deactivate'])->whereNumber('id')->name('learners.deactivate');
+            Route::post('/learners/{id}/reactivate', [LearnerController::class, 'reactivate'])->whereNumber('id')->name('learners.reactivate');
+            Route::delete('/learners/{id}', [LearnerController::class, 'destroy'])->whereNumber('id')->name('learners.destroy');
+            Route::post('/learners/{id}/restore', [LearnerController::class, 'restore'])->whereNumber('id')->name('learners.restore');
+            Route::post('/learners/bulk-deactivate', [LearnerController::class, 'bulkDeactivate'])->name('learners.bulk-deactivate');
+        });
     });
 
     // Fiche de l'entreprise connectée (ENT-08) : description et site web.

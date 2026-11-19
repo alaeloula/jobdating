@@ -326,3 +326,43 @@ Revue du code par Codex (`docs/reviews/REVIEW-UI-NAVIGATION.md`, « À fusionner
 - débordement horizontal de « Entreprises » à 375 px (défaut antérieur, signalé par Codex) : reporté dans `docs/ERREURS_A_CORRIGER.md` (E-04, T-49).
 
 Contrôles après corrections (19/11) : frontend lint, **72 tests** (dont 12 de navigation ; les nouveaux scénarios échouent sans les corrections) et build réussis.
+
+## 2026-11-19 — T-12 (JD-17) : apprenants
+
+Préparation : plan (`docs/tasks/PLAN-T-12.md`) revu par Codex (`docs/reviews/REVIEW-PLAN-T-12.md`, « Plan à revoir » : raccord `ClassUsage`, CNIE dans les filtres journalisés, liens après changement d'e-mail, contrat des actions en masse) ; version 2 contre-revue (`docs/reviews/REVIEW-PLAN-T-12-contre-revue.md`, « Plan validé après corrections mineures ») ; version 2.1 (ancrage de la règle CNIE, action fixée par la route, cas 0 / 0) appliquée sans nouvelle contre-revue. Décisions du 19/11 dans `DECISIONS.md` (« Apprenants (T-12) », COMP-01 tranché).
+
+Réalisé :
+- tables `learners` (CNIE unique, campus, promotion, classe, identifiant CME unique facultatif) et `learner_competence` (sans niveau) ; modèle `Learner` ; règle `App\Support\Cnie` (espaces retirés, majuscules, `\A[A-Z0-9]{5,30}\z`) ;
+- `LearnerClassUsage` branché à la place de `NoClassUsage` (supprimé) : le changement de filière d'une classe compte toutes les fiches (actives, désactivées, supprimées) ;
+- permission `learners.competences.manage` (administrateur, CME) ; routes `/learners` limitées aux **rôles** administrateur, CME et Direction (l'entreprise, qui a `learners.view` pour T-23, reçoit 403) ;
+- `LearnerService` : création (compte activé, mot de passe affiché une fois et envoyé par e-mail de **création** après la validation finale), modification (référentiel inactif conservé, nouveau actif exigé ; liens annulés si l'e-mail change), réinitialisation (sessions fermées, e-mail de réinitialisation), désactivation / réactivation, suppression logique / restauration (sessions et liens coupés, désactivation conservée), compétences ; **ordre de verrouillage classes → compte → fiche**, opération recommencée si la classe a changé pendant l'attente ;
+- actions en masse : sélection par identifiants **ou** filtres, comptage `{ selected, eligible }`, exécution avec le nombre confirmé, 409 sans écriture ni journal, 0 / 0 sans effet, limite 2 000, action fixée par la route ; journal par compte et synthèse sans recherche libre ;
+- recherche par `POST /learners/search` (CNIE hors des adresses) ; **CNIE complète pour l'administrateur, la CME et la Direction** (liste, fiche, recherche), **jamais pour une entreprise** (décision du 19/11 prise pendant la revue du code, qui remplace le masquage et la journalisation de chaque consultation : permission `learners.view_cnie` donnée à la CME et à la Direction) ; téléphone et identifiant CME : administrateur seulement ;
+- journal : catégorie **« Apprenants »** (9 catégories) ; actions `learner.created`, `learner.updated`, `learner.competences_updated`, `learner.bulk_deactivated`, `learner.bulk_competence_added` ; CNIE toujours masquée dans le journal ;
+- `GeneratedPasswordNotification` à deux motifs (création, réinitialisation) ;
+- frontend : écran « Apprenants » (`/apprenants`, lien après « Entreprises participantes ») : filtres (options historiques), sélection « tout le filtre » vidée à chaque changement, confirmation « N sélectionné(s), dont M concerné(s) », nouvelle confirmation après 409, formulaire (valeur inactive conservée, filière déduite), mot de passe affiché une fois hors cache, compétences ; CME : compétences seulement ; Direction : lecture seule ;
+- `DemoAccountsSeeder` : fiche de `apprenant.demo@jobdating.test` (CNIE fictive) si un campus, une promotion et une classe actifs existent, sinon ignorée avec un message.
+
+Limites et points à signaler :
+- la concurrence sur MySQL est vérifiée par l'**ordre des requêtes de verrouillage** (classe verrouillée avant le compte, par identifiant croissant), pas par un vrai test à deux connexions simultanées ;
+- **mesure H2** faite par Codex pendant la revue : désactivation de 2 000 comptes (sessions, liens, journal) en **12,7 s** en local, hors trajet HTTP ;
+- le faux de `Notification` ne tient pas compte de `afterCommit` : le test « aucune notification après annulation » utilise la vraie file `database`.
+
+Passages de relais : T-13 (même règle CNIE, même ordre de verrouillage — toutes les classes de l'import par identifiant croissant —, liens annulés si l'e-mail change, e-mails à la validation finale) ; T-14 (inscription des apprenants à l'événement) ; T-20 (état du CV dans la fiche) ; T-23 / T-24 (routes entreprise distinctes, sans CNIE ni téléphone) ; T-40 (compétences actives seulement).
+
+Contrôles (19/11) : Pint et PHPStan sans erreur ; tests T-12 réussis (Docker) : 33 dans `LearnerTest` et 1 pour les données de démonstration ; suite backend complète dans Docker : **406 tests réussis, 2040 assertions** (≈ 4 min 20, code de sortie 0) ; frontend lint, **78 tests** et build réussis ; navigateur (administrateur de démonstration, avant la décision sur la CNIE) : liste et fiche affichées.
+
+Revue du code par Codex (`docs/reviews/REVIEW-T-12-apprenants.md`, « À corriger avant fusion », faite sur la version où la CNIE était encore masquée). Décisions du responsable technique (19/11) : tout corriger.
+- constat 1 (requête sans `ids` ni `filters` traitée comme « tous les apprenants ») : refusée (422) pour le comptage et les deux actions, sans écriture ni journal ; `filters: {}` reste la demande explicite de tous les apprenants visibles ; la synthèse indique le mode (« apprenants cochés » ou « filtre ») ;
+- constat 2 (ajout de compétence en masse sans verrou des comptes) : comptes verrouillés d'abord, par identifiant croissant, puis fiches ; éligibilité relue sous ces verrous (compte supprimé entre-temps → 409) ; verrou **partagé** sur la compétence ;
+- constat 3 (réponse de comptage tardive qui rouvrait la confirmation) : toute réponse arrivée après une annulation, un changement de sélection ou une nouvelle demande est ignorée ;
+- constat 4 (recherche en erreur affichée comme une liste vide) : message d'erreur et bouton « Réessayer » ;
+- constat 5 (retour à la ligne ou tabulation retirés de la CNIE par `TrimStrings`), option (a) : le champ `cnie` est exclu de `TrimStrings` (`bootstrap/app.php`) ; seuls les espaces sont retirés, tout autre caractère est refusé par l'API (décision 9).
+
+Contrôles après la décision CNIE et les corrections (19/11) : Pint et PHPStan sans erreur ; suite backend complète dans Docker : **410 tests réussis, 2073 assertions** (≈ 3 min 45, code de sortie 0), dont 37 dans `LearnerTest` ; frontend lint, **80 tests** et build réussis.
+
+Contre-revue Codex (`docs/reviews/REVIEW-T-12-contre-revue.md`, « À fusionner après corrections mineures ») : les 5 constats et la décision CNIE sont validés. Deux nouveaux constats mineurs, corrigés (décision du responsable technique du 19/11) :
+- constat 6 (ajout individuel de la même compétence pendant un ajout en masse : erreur 500 au lieu de 409) : associations relues en lecture verrouillée avant le recomptage ; test sur la même connexion (le scénario à deux connexions a été rejoué par Codex) ;
+- constat 7 (anciennes lignes `learner.cnie_viewed` qui rendaient le journal illisible) : action gardée comme valeur **historique** (« CNIE consultée (ancienne version) »), plus jamais écrite ; test avec une ancienne ligne.
+
+Contrôles finaux (19/11) : Pint et PHPStan sans erreur ; suite backend complète dans Docker : **412 tests réussis, 2084 assertions** (≈ 5 min, code de sortie 0) ; frontend : **80 tests** réussis.

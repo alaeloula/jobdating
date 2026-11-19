@@ -3,6 +3,11 @@
 namespace Tests\Feature\Auth;
 
 use App\Enums\Role;
+use App\Models\Learner;
+use App\Models\Referentials\Campus;
+use App\Models\Referentials\Filiere;
+use App\Models\Referentials\Promotion;
+use App\Models\Referentials\SchoolClass;
 use App\Models\User;
 use Database\Seeders\DemoAccountsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -44,5 +49,26 @@ class DemoAccountsSeederTest extends TestCase
             ->postJson('/api/v1/login', ['identifier' => 'entreprise-demo', 'password' => DemoAccountsSeeder::PASSWORD])
             ->assertOk()
             ->assertJsonPath('data.role', 'entreprise');
+    }
+
+    /** Fiche de l'apprenant de démonstration (T-12) : seulement si les référentiels existent ; relance sans doublon. */
+    public function test_fiche_apprenant_de_demonstration(): void
+    {
+        $this->app->detectEnvironment(fn () => 'local');
+
+        $this->seed(DemoAccountsSeeder::class);
+        $this->assertSame(0, Learner::query()->count());
+
+        Campus::query()->create(['name' => 'Campus Fictif']);
+        Promotion::query()->create(['label' => 'Promotion Fictive']);
+        SchoolClass::query()->create(['name' => 'Classe Fictive', 'filiere_id' => Filiere::query()->create(['code' => 'JAVA', 'label' => 'Java'])->id]);
+        $this->seed(DemoAccountsSeeder::class);
+        $this->seed(DemoAccountsSeeder::class);
+
+        $learner = Learner::query()->sole();
+        $this->assertSame(DemoAccountsSeeder::DEMO_CNIE, $learner->cnie);
+        $this->assertSame('apprenant.demo@jobdating.test', $learner->user->email);
+        $this->assertSame(1, Campus::query()->count());
+        $this->app->detectEnvironment(fn () => 'testing');
     }
 }

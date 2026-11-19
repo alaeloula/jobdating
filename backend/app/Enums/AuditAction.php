@@ -31,6 +31,15 @@ enum AuditAction: string
     case CompanyProfilesUpdated = 'company.profiles_updated';
     case CompanyCredentialsPrinted = 'company.credentials_printed';
 
+    case LearnerCreated = 'learner.created';
+    case LearnerUpdated = 'learner.updated';
+    case LearnerCompetencesUpdated = 'learner.competences_updated';
+    case LearnerBulkDeactivated = 'learner.bulk_deactivated';
+    case LearnerBulkCompetenceAdded = 'learner.bulk_competence_added';
+    // Valeur HISTORIQUE, plus jamais écrite (décision du 19/11 : plus de journalisation de chaque
+    // consultation de la CNIE). Conservée pour lire les anciennes lignes du journal (contre-revue T-12, constat 7).
+    case LearnerCnieViewed = 'learner.cnie_viewed';
+
     case ReferentialCreated = 'referential.created';
     case ReferentialUpdated = 'referential.updated';
     case ReferentialDeactivated = 'referential.deactivated';
@@ -47,6 +56,9 @@ enum AuditAction: string
             self::PasswordChanged => AuditCategory::Comptes,
             self::CompanyCreated, self::CompanyUpdated, self::CompanyProfilesUpdated,
             self::CompanyCredentialsPrinted => AuditCategory::Entreprises,
+            self::LearnerCreated, self::LearnerUpdated, self::LearnerCompetencesUpdated,
+            self::LearnerBulkDeactivated, self::LearnerBulkCompetenceAdded => AuditCategory::Apprenants,
+            self::LearnerCnieViewed => AuditCategory::Cnie,
             self::ReferentialCreated, self::ReferentialUpdated, self::ReferentialDeactivated,
             self::ReferentialReactivated, self::ReferentialReordered => AuditCategory::Referentiels,
         };
@@ -76,6 +88,12 @@ enum AuditAction: string
             self::CompanyUpdated => 'Fiche entreprise modifiée',
             self::CompanyProfilesUpdated => 'Profils recherchés modifiés',
             self::CompanyCredentialsPrinted => 'Fiche de connexion imprimée',
+            self::LearnerCreated => 'Apprenant créé',
+            self::LearnerUpdated => 'Fiche apprenant modifiée',
+            self::LearnerCompetencesUpdated => 'Compétences de l’apprenant modifiées',
+            self::LearnerBulkDeactivated => 'Apprenants désactivés en masse',
+            self::LearnerBulkCompetenceAdded => 'Compétence ajoutée à une sélection d’apprenants',
+            self::LearnerCnieViewed => 'CNIE consultée (ancienne version)',
             self::ReferentialCreated => 'Référentiel : valeur ajoutée',
             self::ReferentialUpdated => 'Référentiel : valeur modifiée',
             self::ReferentialDeactivated => 'Référentiel : valeur désactivée',

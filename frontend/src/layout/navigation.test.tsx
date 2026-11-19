@@ -16,9 +16,9 @@ const HOMES: Record<RoleName, string> = {
 
 /** Permissions réelles des rôles (RolesAndPermissionsSeeder), limitées à celles qui guident la navigation. */
 const PERMISSIONS: Record<RoleName, string[]> = {
-  administrateur: ['companies.manage', 'companies.profiles.manage', 'users.manage', 'referentials.manage', 'audit.view'],
-  cme: ['companies.profiles.manage', 'referentials.manage'],
-  direction: [],
+  administrateur: ['companies.manage', 'companies.profiles.manage', 'learners.view', 'learners.update', 'users.manage', 'referentials.manage', 'audit.view'],
+  cme: ['companies.profiles.manage', 'learners.view', 'learners.competences.manage', 'referentials.manage'],
+  direction: ['learners.view'],
   entreprise: [],
   apprenant: [],
 }
@@ -64,9 +64,9 @@ async function navLinks(): Promise<string[]> {
 
 describe('Navigation par rôle', () => {
   it.each([
-    ['administrateur', ['Tableau de bord', 'Entreprises participantes', 'Comptes CME et Direction', 'Référentiels', 'Journal d’audit']],
-    ['cme', ['Tableau de bord', 'Entreprises participantes', 'Référentiels']],
-    ['direction', ['Tableau de bord']],
+    ['administrateur', ['Tableau de bord', 'Entreprises participantes', 'Apprenants', 'Comptes CME et Direction', 'Référentiels', 'Journal d’audit']],
+    ['cme', ['Tableau de bord', 'Entreprises participantes', 'Apprenants', 'Référentiels']],
+    ['direction', ['Tableau de bord', 'Apprenants']],
     ['entreprise', ['Accueil', 'Profil entreprise']],
     ['apprenant', ['Ma journée']],
   ] as [RoleName, string[]][])('%s : liens dans l’ordre des maquettes, écrans existants seulement', async (role, expected) => {

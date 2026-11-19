@@ -31,7 +31,7 @@ class PermissionMatrixTest extends TestCase
     private const MATRIX = [
         'users.manage' => [true, false, false, false, false],            // Gérer les comptes et les rôles
         'learners.update' => [true, false, false, false, false],         // Modifier un apprenant, réinitialiser son mot de passe
-        'learners.view_cnie' => [true, false, false, false, false],      // Consulter la CNIE d'un apprenant
+        'learners.view_cnie' => [true, true, false, false, true],        // CNIE : administrateur, CME, Direction (décision du 19/11, remplace RG-APR-06)
         'referentials.manage' => [true, true, false, false, false],      // Gérer les référentiels
         'events.manage' => [true, false, false, false, false],           // Créer / modifier un événement
         'program.manage' => [true, true, false, false, false],           // Gérer le programme de l'événement
@@ -39,6 +39,7 @@ class PermissionMatrixTest extends TestCase
         'locations.manage' => [true, true, false, false, false],         // Saisir l'emplacement des entreprises
         'companies.manage' => [true, false, false, false, false],        // Gérer les entreprises (décision du 19/11)
         'companies.profiles.manage' => [true, true, false, false, false], // Profils recherchés (RG-ENTR-08, 19/11)
+        'learners.competences.manage' => [true, true, false, false, false], // Compétences des apprenants (16/11)
         'program.view' => [true, true, true, true, true],                // Consulter le programme
         'learners.view' => [true, true, true, false, true],              // Consulter la liste des apprenants
         'cv.view' => [true, true, true, true, true],                     // Consulter et télécharger un CV validé

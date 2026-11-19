@@ -19,6 +19,8 @@ enum Permission: string
 
     /** Consulter la CNIE d'un apprenant. */
     case LearnersViewCnie = 'learners.view_cnie';
+    // Compétences des apprenants (décision du 16/11/2026) : administrateur et CME.
+    case LearnersCompetencesManage = 'learners.competences.manage';
 
     /** Gérer les référentiels. */
     case ReferentialsManage = 'referentials.manage';
