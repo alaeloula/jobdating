@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\PasswordLinkRequestController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\ReferentialController;
+use App\Http\Controllers\StaffAccountController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', LoginController::class)
@@ -47,6 +48,20 @@ Route::middleware(['auth:sanctum', 'session.valid'])->group(function () {
     Route::middleware('permission:'.Permission::AuditView->value)->group(function () {
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
         Route::get('/audit-logs/filters', [AuditLogController::class, 'filters'])->name('audit-logs.filters');
+    });
+
+    // Comptes de l'équipe : CME, Direction, administrateur (ADM-01, T-10). Administrateur seul.
+    Route::middleware('permission:'.Permission::UsersManage->value)->group(function () {
+        Route::get('/users', [StaffAccountController::class, 'index'])->name('users.index');
+        Route::post('/users', [StaffAccountController::class, 'store'])->name('users.store');
+        Route::patch('/users/{id}', [StaffAccountController::class, 'update'])->whereNumber('id')->name('users.update');
+        Route::delete('/users/{id}', [StaffAccountController::class, 'destroy'])->whereNumber('id')->name('users.destroy');
+        Route::post('/users/{id}/deactivate', [StaffAccountController::class, 'deactivate'])->whereNumber('id')->name('users.deactivate');
+        Route::post('/users/{id}/reactivate', [StaffAccountController::class, 'reactivate'])->whereNumber('id')->name('users.reactivate');
+        Route::post('/users/{id}/restore', [StaffAccountController::class, 'restore'])->whereNumber('id')->name('users.restore');
+        Route::post('/users/{id}/resend-activation', [StaffAccountController::class, 'resendActivation'])->whereNumber('id')->name('users.resend-activation');
+        Route::post('/users/{id}/reset-password', [StaffAccountController::class, 'resetPassword'])->whereNumber('id')
+            ->middleware('no.store')->name('users.reset-password');
     });
 
     // Référentiels (ADM-09). Lecture des options : tout utilisateur connecté.
