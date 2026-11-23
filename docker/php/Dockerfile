@@ -1,11 +1,12 @@
 # PHP 8.4 pour lancer les tests et les outils du backend en local (ENV-01).
 # Même version et mêmes extensions que la CI (.github/workflows : mbstring, pdo_mysql, intl, zip).
 # Ne sert pas en production.
+# pcntl : délai des tâches de file appliqué par le worker (imports d'apprenants, T-13).
 FROM php:8.4-cli
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libicu-dev libzip-dev unzip git \
-    && docker-php-ext-install pdo_mysql intl zip \
+    && docker-php-ext-install pdo_mysql intl zip pcntl \
     && rm -rf /var/lib/apt/lists/*
 
 # Cache des scripts PHP en ligne de commande : le dossier partagé avec Windows est lent à lire

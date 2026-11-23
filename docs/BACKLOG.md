@@ -81,4 +81,4 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 | T-61 (JD-41) | Exports CSV et Excel en flux (modèle PC-43) + journal des exports | STAT-05, ENT-09, TRA-02 | A |
 | T-62 (JD-42) | Espace Direction en lecture seule | CDC 3.1 | A |
 | T-63 (JD-43) | Reprise des **passages historiques** | CDC 8.8, REP-01 à 03 | A |
-| T-44 (Jira à créer) | Suivi des passages (CME) : liste de tous les passages, statut de suivi, détail, historique, rappels J+7, J+30, J+90, export. Remplace l'écran « Passages des entreprises » | DECISIONS 16/11 (V2) | A |
+| T-44 (Jira à créer) | Suivi des passages (CME) : liste de tous les passages, statut de suivi, détail, historique, **commentaires de l'équipe CME** (DECISIONS 20/11), rappels J+7, J+30, J+90, export. Remplace l'écran « Passages des entreprises » | DECISIONS 16/11 (V2), 20/11 | A |

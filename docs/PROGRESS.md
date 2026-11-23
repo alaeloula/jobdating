@@ -366,3 +366,60 @@ Contre-revue Codex (`docs/reviews/REVIEW-T-12-contre-revue.md`, « À fusionner 
 - constat 7 (anciennes lignes `learner.cnie_viewed` qui rendaient le journal illisible) : action gardée comme valeur **historique** (« CNIE consultée (ancienne version) »), plus jamais écrite ; test avec une ancienne ligne.
 
 Contrôles finaux (19/11) : Pint et PHPStan sans erreur ; suite backend complète dans Docker : **412 tests réussis, 2084 assertions** (≈ 5 min, code de sortie 0) ; frontend : **80 tests** réussis.
+
+## 2026-11-20 — T-13 (JD-18) : import des apprenants (fichier YouCode School Admin)
+
+Préparation : plan (`docs/tasks/PLAN-T-13.md`) revu par Codex (`docs/reviews/REVIEW-PLAN-T-13.md`, « Plan à revoir », 6 constats majeurs) ; version 2 contre-revue (`docs/reviews/REVIEW-PLAN-T-13-contre-revue.md`, « Plan à revoir », 3 points majeurs et 1 mineur) ; version 2.1 appliquée sans nouvelle contre-revue (décision du 20/11). Format du fichier réel observé sur un export fourni par le responsable technique (données réelles jamais copiées ni utilisées). Décisions du 20/11 dans `DECISIONS.md` (« Import des apprenants (T-13) », classe choisie avant l'import).
+
+Réalisé :
+- dépendance **OpenSpout 5.15.3** (accord du responsable technique) ; extension **`pcntl`** ajoutée à l'image Docker PHP (délai des tâches de file) ;
+- lecture CSV (virgule ou point-virgule, BOM) et XLSX, en-têtes en ligne 1 ou 2 ; colonnes ignorées jamais copiées ; cellules non texte et formules refusées (« Valeur non admise ») ; limites 1 000 lignes, 5 Mo, 50 Mo décompressés, 50 000 chaînes partagées ; fichiers intermédiaires d'OpenSpout dans un dossier privé supprimé aussitôt (`App\Support\PrivateTemp`) ;
+- aperçu (`LearnerImportPlanner`) : campus et promotion choisis, **classe lue sur chaque ligne** (v2.2, ci-dessous) ; motifs de rejet sans CNIE ni e-mail ; à créer, à mettre à jour, inchangés, rejetés ; **empreinte** par ligne ;
+- confirmation (fichier relu, 409 si l'aperçu a changé, **clé de confirmation** idempotente, autre empreinte avec la même clé refusée), mise en file **après** la validation, message de file = identifiant seul ;
+- traitement (`LearnerImportRunner`, tâche `ProcessLearnerImport` sur la connexion `database-imports`, `retry_after` 900 s, délai 600 s, une tentative) : prise en charge conditionnelle, mots de passe préparés et hachés hors transaction pour tous les nouveaux comptes, verrous classes → comptes → fiches, revalidation de toutes les lignes avant la première écriture, reprise complète (3 fois) après déplacement de classe ou interblocage, finalisation et effacement du `payload` dans la même transaction, erreurs expurgées, **états terminaux protégés** ;
+- `LearnerService` : écritures partagées (`insert`, `apply`) et méthodes d'import (`importCreate` avec hachage préparé, compte inactif sans e-mail ; `importUpdate` avec désactivation et réactivation) ; création et modification à la main inchangées ;
+- fichier des mots de passe : Excel en clair généré depuis la copie chiffrée, plusieurs téléchargements journalisés, suppression journalisée, valeurs neutralisées ;
+- commande `imports:cleanup` toutes les 5 minutes (imports abandonnés, dossiers temporaires de plus de 55 minutes) ;
+- permission **`learners.import`** ; journal « Imports et exports » (`learner_import.*`) ;
+- frontend : écran « Import des apprenants » (`/apprenants/import`) : choix, aperçu, confirmation, suivi du traitement, rapport, mots de passe, historique ; aperçu effacé à chaque changement, réponse tardive ignorée, même clé renvoyée après une erreur réseau, 409 → nouvel aperçu ;
+- fichier de test **fictif** : `C:\Users\Youcode\Desktop\jobdating\fichiers-de-test\import-apprenants-fictif.csv`.
+
+Limites et points à signaler :
+- **classe écrite avec un autre alphabet** dans l'export réel (`J Λ I W Λ R`) : la comparaison ignore la casse et les espaces, pas les lettres ; le nom de la classe dans les référentiels doit donc être **écrit comme dans le fichier**, sinon toutes ses lignes sont rejetées ;
+- une valeur CSV commençant par `=` est lue comme une formule par OpenSpout et la ligne est rejetée (« Valeur non admise ») ;
+- tests de **concurrence à deux connexions MySQL** non écrits dans la suite ; Codex a rejoué **trois scénarios bloquants à deux connexions** (terminés correctement) et la **relivraison à travers le vrai worker** (succès conservé ; échec avant succès → `echec`, `payload` effacé) ; cela ne prouve pas toutes les formes d'interblocage ;
+- **mesure de Codex** : 1 000 comptes actifs (bcrypt coût 12) traités en **≈ 302 s** (admission ≈ 2,5 s), pic mémoire PHP 26 Mio, 1 000 notifications mises en file ; la durée reste sous le délai de 600 s ;
+- en local, le worker des imports doit tourner **dans Docker** : `docker compose run --rm php php artisan queue:work database-imports --queue=imports --timeout=660` (le PHP Windows n'a pas `pcntl`).
+
+Passages de relais : **import des entreprises** (tâche séparée) ; **T-14** : inscription des apprenants actifs importés à l'événement courant (RG-IMP-07) ; production : worker `database-imports` supervisé sur le serveur Linux avec `pcntl`, planificateur actif (`imports:cleanup`).
+
+Revue du code par Codex (`docs/reviews/REVIEW-T-13-import.md`, « À corriger avant fusion », 4 constats majeurs et 5 mineurs), tous corrigés (accord du 20/11) :
+- constat 1 (doublon avec une autre erreur) : les doublons de CNIE et d'e-mail sont cherchés sur **toutes** les lignes ayant une clé admissible, même déjà rejetées pour un autre motif ; toutes les occurrences sont rejetées (le premier motif est conservé) ;
+- constat 2 (50 000 chaînes partagées) : comptage réel des éléments `<si>` de `xl/sharedStrings.xml` (lecture en flux, arrêt au-delà de la limite), sans se fier au compteur déclaré ;
+- constat 3 (bouton bloqué) : tout changement de choix, « Recommencer » ou l'ouverture d'un rapport libèrent le bouton ; la réponse abandonnée reste ignorée ;
+- constat 4 (historique) : bouton « Voir le rapport » par import (état, compteurs, **lignes rejetées**, erreur, mots de passe ; le suivi reprend si l'import est encore en attente ou en cours) ; lignes rejetées affichées dans le rapport ; historique **paginé** (20 par page, « Précédent » / « Suivant ») ;
+- constat 5 (point-virgule avec titre) : le séparateur est choisi sur les **deux premières lignes** (celui qui apparaît le plus) ;
+- constat 6 (purge) : la mise à jour atomique de `markFailed()` reprend la **même condition d'ancienneté** que la sélection ; un import pris en charge entre les deux n'est plus annulé ;
+- constat 7 (lignes inchangées) : elles sont transmises au traitement, **verrouillées et revalidées** avec les autres (aucune écriture) ; une ligne inchangée devenue invalide fait échouer l'import ;
+- constat 8 (alerte de suivi) : erreur de suivi séparée des autres, effacée à la première réponse valide ;
+- constat 9 (lignes vides) : lecture avec conservation des lignes vides ; numéros de ligne du rapport = numéros réels du fichier.
+Tests ajoutés : 5 backend (un par constat 1, 2, 5 + 9, 6 avec prise en charge simulée entre la sélection et l'annulation, 7) et 3 frontend (constats 3, 4, 8).
+Changement de règle pendant la contre-revue (plan **v2.2**, décision du 20/11) : l'export réel « Étudiants » filtré par campus et promotion contient **plusieurs classes** ; la classe n'est plus choisie avant l'import :
+- la classe de chaque apprenant vient de la colonne `Classe` de sa ligne, comparée sans casse ni espaces aux classes **actives** des référentiels ; motifs « Classe manquante », « Classe inconnue ou désactivée : vérifiez les référentiels », « Classe ambiguë dans les référentiels » ; aucune classe ajoutée depuis l'import ;
+- empreinte : classe retenue par ligne ; traitement : verrou sur toutes les classes des lignes (et classes actuelles des apprenants connus), classe désactivée depuis l'aperçu → échec propre ; fichier des mots de passe : classe de chaque apprenant ;
+- `learner_imports.class_id` remplacé par `class_counts` (comptes prévus par classe) dans la migration (non encore fusionnée) ; API : plus de `class_id` ; aperçu et rapport : `classes` (comptes par classe) ;
+- écran : choix de la classe retiré, tableau « Par classe » dans l'aperçu et le rapport ;
+- tests : 4 backend (fichier à 3 classes avec inconnue, désactivée et vide ; classe ambiguë ; apprenant connu changé de classe ; classe désactivée avant la confirmation puis avant le traitement), tests existants adaptés ; tests frontend adaptés (aucun `class_id` envoyé, tableau par classe).
+- base de développement : la migration modifiée doit être rejouée (`migrate:rollback --step=1` puis `migrate`, table des imports vide).
+
+Contrôles après correction (20/11) : Pint et PHPStan sans erreur ; suite backend complète dans Docker : **438 tests réussis, 2249 assertions** (≈ 5 min, code de sortie 0), dont 21 pour l'import ; frontend lint, **88 tests** (dont 8 pour l'import) et build réussis. Après le changement v2.2 : Pint et PHPStan sans erreur ; suite backend complète : **442 tests réussis, 2278 assertions** (≈ 6 min, code de sortie 0), dont 25 pour l'import ; frontend lint, **88 tests** et build réussis ; essai manuel par le responsable technique sur l'export réel (3 classes, 25 lignes) : aperçu correct.
+
+Contre-revue du code par Codex (`docs/reviews/REVIEW-T-13-contre-revue.md`, 23/11, « À corriger avant fusion ») : changement v2.2 confirmé, 8 constats sur 9 corrigés et constat 5 partiel ; 1 nouveau constat majeur et 4 mineurs. Décision du 23/11 :
+- N1 (réponse tardive d'un rapport, suppression visant le mauvais import) : corrigé ; chaque lecture du rapport, du suivi et de la confirmation est liée à une génération d'affichage, les réponses périmées sont ignorées, l'ancien rapport disparaît pendant le chargement du suivant ;
+- N3 (XML de chaînes partagées mal formé → erreur 500) : corrigé ; refus du fichier (422) sans détail XML ;
+- N5 (ancienne erreur de suppression restée affichée) : corrigé ;
+- N2 (séparateur CSV et valeurs entre guillemets) et N4 (historique sans retour après une page en erreur) : cas rares sans impact, reportés en **E-05** et **E-06** (`ERREURS_A_CORRIGER.md`, T-49).
+Tests ajoutés : 1 backend (N3) et 4 frontend (N1 : réponses B puis A avec cible de suppression, ancienne réponse après « Nouvel import », suivi tardif ; N5).
+Contrôles (23/11) : Pint et PHPStan sans erreur ; suite backend complète dans Docker : **443 tests réussis, 2281 assertions** (≈ 6 min, code de sortie 0), dont 26 pour l'import ; frontend lint, **92 tests** et build réussis. Essai fonctionnel de l'import jusqu'à la confirmation réalisé par le responsable technique (23/11).
+
+Contrôles (20/11) : Pint et PHPStan sans erreur ; suite backend complète dans Docker : **433 tests réussis, 2230 assertions** (≈ 5 min 30, code de sortie 0), puis deux corrections d'annotations de type demandées par PHPStan (sans effet sur le comportement) et `tests/Feature/Learners` relancé : **55 tests réussis** (dont 16 pour l'import) ; frontend lint, **85 tests** et build réussis.

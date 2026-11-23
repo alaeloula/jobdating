@@ -76,33 +76,7 @@ class LearnerService
             $this->assertActive(SchoolClass::class, $data['class_id'], 'class_id', 'Cette classe n’est plus proposée.');
             $this->assertCnieFree($cnie, null);
 
-            $user = new User;
-            $user->forceFill([
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'email' => $data['email'],
-                'phone' => $data['phone'] ?? null,
-                'password' => $password,
-                'activated_at' => now(),
-            ])->save();
-            $user->setRole(Role::Apprenant);
-
-            $learner = new Learner;
-            $learner->forceFill([
-                'user_id' => $user->getKey(),
-                'cnie' => $cnie,
-                'campus_id' => (int) $data['campus_id'],
-                'promotion_id' => (int) $data['promotion_id'],
-                'class_id' => (int) $data['class_id'],
-                'cme_learner_id' => $data['cme_learner_id'] ?? null,
-            ])->save();
-            $learner->setRelation('user', $user);
-
-            $this->audit->record(AuditAction::LearnerCreated, $learner, new: $this->snapshot($learner), actor: $admin);
-            // Mise en file après la validation FINALE (afterCommit) : une annulation n'envoie rien.
-            $user->notify(new GeneratedPasswordNotification($password, GeneratedPasswordNotification::REASON_CREATED));
-
-            return $learner;
+            return $this->insert(['cnie' => $cnie] + $data, $password, $password, true, $admin);
         }, self::ATTEMPTS));
 
         return ['learner' => $learner, 'password' => $password];
@@ -144,33 +118,7 @@ class LearnerService
                         $this->assertCnieFree($fields['cnie'], $locked->getKey());
                     }
 
-                    $identity = array_intersect_key($data, array_flip(['first_name', 'last_name', 'email', 'phone']));
-                    $user->fill($identity);
-                    $emailChanged = $user->isDirty('email');
-                    $user->save();
-                    if ($emailChanged) {
-                        // Un lien envoyé à l'ancienne adresse ne doit plus permettre de changer le mot de passe.
-                        $this->tokens->revokeAll($user, PasswordTokenType::Reset);
-                        $this->tokens->revokeAll($user, PasswordTokenType::Activation);
-                    }
-
-                    $locked->setRelation('user', $user);
-                    $before = $this->snapshot($locked);
-                    $locked->fill($fields);
-                    $changed = array_keys($locked->getDirty());
-                    $locked->save();
-
-                    if ($changed !== []) {
-                        $after = $this->snapshot($locked->refresh()->setRelation('user', $user));
-                        $keys = $this->snapshotKeys($changed);
-                        $this->audit->record(
-                            AuditAction::LearnerUpdated,
-                            $locked,
-                            array_intersect_key($before, array_flip($keys)),
-                            array_intersect_key($after, array_flip($keys)),
-                            actor: $admin,
-                        );
-                    }
+                    $this->apply($locked, $user, $data, $admin);
 
                     return $locked->setRelation('user', $user);
                 }, self::ATTEMPTS));
@@ -281,6 +229,119 @@ class LearnerService
 
             return $locked;
         }, self::ATTEMPTS);
+    }
+
+    // ------------------------------------------------------------------ Import (T-13)
+
+    /**
+     * Création d'un apprenant par l'import (plan T-13 v2.1, §4) : l'APPELANT a ouvert la transaction
+     * et pris les verrous (classes, comptes, fiches) et a vérifié les règles. Le mot de passe est
+     * préparé avant la transaction : `$hash` est enregistré tel quel (aucun hachage sous les verrous) ;
+     * l'e-mail de création n'est programmé que pour un compte ACTIF (décision 7 du 20/11).
+     *
+     * @param  array{cnie: string, first_name: string, last_name: string, email: string, phone: string|null, campus_id: int, promotion_id: int, class_id: int}  $data
+     */
+    public function importCreate(array $data, string $password, string $hash, bool $active, User $admin): Learner
+    {
+        return $this->insert($data, $hash, $active ? $password : null, $active, $admin);
+    }
+
+    /**
+     * Mise à jour d'un apprenant connu par l'import : prénom, nom, e-mail, téléphone, campus,
+     * promotion, classe et statut. Mot de passe, compétences, passages et CV inchangés. L'APPELANT
+     * détient les verrous et a relu `$locked` et `$user` sous ces verrous.
+     *
+     * @param  array{first_name: string, last_name: string, email: string, phone: string|null, campus_id: int, promotion_id: int, class_id: int}  $data
+     */
+    public function importUpdate(Learner $locked, User $user, array $data, bool $active, User $admin): void
+    {
+        $this->apply($locked, $user, $data, $admin);
+
+        if (! $active && ! $user->isDeactivated()) {
+            $user->forceFill(['deactivated_at' => now()])->save();
+            $this->cut($user);
+        } elseif ($active && $user->isDeactivated()) {
+            $user->forceFill(['deactivated_at' => null])->save();
+        }
+    }
+
+    /**
+     * Écriture d'un nouvel apprenant (création à la main et import). `$passwordValue` est le mot de
+     * passe en clair (haché par le cast) ou un hachage déjà calculé (conservé tel quel par le cast).
+     * `$notify` : mot de passe à envoyer par e-mail, ou null pour ne rien envoyer.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function insert(array $data, string $passwordValue, ?string $notify, bool $active, User $admin): Learner
+    {
+        $user = new User;
+        $user->forceFill([
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'] ?? null,
+            'password' => $passwordValue,
+            'activated_at' => now(),
+            'deactivated_at' => $active ? null : now(),
+        ])->save();
+        $user->setRole(Role::Apprenant);
+
+        $learner = new Learner;
+        $learner->forceFill([
+            'user_id' => $user->getKey(),
+            'cnie' => $data['cnie'],
+            'campus_id' => (int) $data['campus_id'],
+            'promotion_id' => (int) $data['promotion_id'],
+            'class_id' => (int) $data['class_id'],
+            'cme_learner_id' => $data['cme_learner_id'] ?? null,
+        ])->save();
+        $learner->setRelation('user', $user);
+
+        $this->audit->record(AuditAction::LearnerCreated, $learner, new: $this->snapshot($learner), actor: $admin);
+        if ($notify !== null) {
+            // Mise en file après la validation FINALE (afterCommit) : une annulation n'envoie rien.
+            $user->notify(new GeneratedPasswordNotification($notify, GeneratedPasswordNotification::REASON_CREATED));
+        }
+
+        return $learner;
+    }
+
+    /**
+     * Écriture des champs d'un apprenant existant (modification à la main et import) ; journal des
+     * seuls champs modifiés ; liens annulés si l'e-mail change (plan T-12 v2, constat 3).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function apply(Learner $locked, User $user, array $data, User $admin): void
+    {
+        $fields = array_intersect_key($data, array_flip(Learner::EDITABLE));
+        $identity = array_intersect_key($data, array_flip(['first_name', 'last_name', 'email', 'phone']));
+        $user->fill($identity);
+        $emailChanged = $user->isDirty('email');
+        $user->save();
+        if ($emailChanged) {
+            // Un lien envoyé à l'ancienne adresse ne doit plus permettre de changer le mot de passe.
+            $this->tokens->revokeAll($user, PasswordTokenType::Reset);
+            $this->tokens->revokeAll($user, PasswordTokenType::Activation);
+        }
+
+        $locked->setRelation('user', $user);
+        $before = $this->snapshot($locked);
+        $locked->fill($fields);
+        $changed = array_keys($locked->getDirty());
+        $locked->save();
+
+        if ($changed !== []) {
+            $after = $this->snapshot($locked->refresh()->setRelation('user', $user));
+            $keys = $this->snapshotKeys($changed);
+            $this->audit->record(
+                AuditAction::LearnerUpdated,
+                $locked,
+                array_intersect_key($before, array_flip($keys)),
+                array_intersect_key($after, array_flip($keys)),
+                actor: $admin,
+            );
+        }
     }
 
     // ------------------------------------------------------------------ Actions en masse (§5)

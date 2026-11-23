@@ -44,6 +44,17 @@ return [
             'after_commit' => false,
         ],
 
+        // Imports d'apprenants (T-13, plan v2.1) : même table, relivraison après 900 s, au-delà du
+        // délai de la tâche (600 s). Worker dédié : queue:work database-imports --queue=imports --timeout=660.
+        'database-imports' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'imports',
+            'retry_after' => 900,
+            'after_commit' => false,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),

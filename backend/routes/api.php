@@ -14,6 +14,7 @@ use App\Http\Controllers\Auth\PasswordLinkRequestController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\LearnerController;
+use App\Http\Controllers\LearnerImportController;
 use App\Http\Controllers\MyCompanyController;
 use App\Http\Controllers\ReferentialController;
 use App\Http\Controllers\StaffAccountController;
@@ -116,6 +117,18 @@ Route::middleware(['auth:sanctum', 'session.valid'])->group(function () {
             Route::post('/learners/{id}/restore', [LearnerController::class, 'restore'])->whereNumber('id')->name('learners.restore');
             Route::post('/learners/bulk-deactivate', [LearnerController::class, 'bulkDeactivate'])->name('learners.bulk-deactivate');
         });
+    });
+
+    // Import des apprenants (ADM-04, T-13) : permission `learners.import` seule (décision 13 du 20/11).
+    Route::middleware('permission:'.Permission::LearnersImport->value)->group(function () {
+        Route::post('/learner-imports/preview', [LearnerImportController::class, 'preview'])->name('learner-imports.preview');
+        Route::post('/learner-imports', [LearnerImportController::class, 'store'])->name('learner-imports.store');
+        Route::get('/learner-imports', [LearnerImportController::class, 'index'])->name('learner-imports.index');
+        Route::get('/learner-imports/{id}', [LearnerImportController::class, 'show'])->whereNumber('id')->name('learner-imports.show');
+        Route::get('/learner-imports/{id}/passwords', [LearnerImportController::class, 'passwords'])->whereNumber('id')
+            ->middleware('no.store')->name('learner-imports.passwords');
+        Route::delete('/learner-imports/{id}/passwords', [LearnerImportController::class, 'destroyPasswords'])->whereNumber('id')
+            ->name('learner-imports.passwords.destroy');
     });
 
     // Fiche de l'entreprise connectée (ENT-08) : description et site web.

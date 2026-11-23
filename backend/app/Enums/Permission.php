@@ -21,6 +21,8 @@ enum Permission: string
     case LearnersViewCnie = 'learners.view_cnie';
     // Compétences des apprenants (décision du 16/11/2026) : administrateur et CME.
     case LearnersCompetencesManage = 'learners.competences.manage';
+    // Import du fichier YouCode School Admin (T-13, décision 13 du 20/11/2026) : administrateur.
+    case LearnersImport = 'learners.import';
 
     /** Gérer les référentiels. */
     case ReferentialsManage = 'referentials.manage';
