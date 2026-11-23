@@ -9,6 +9,7 @@ const AUDIT_VIEW = 'audit.view'
 const REFERENTIALS_MANAGE = 'referentials.manage'
 const USERS_MANAGE = 'users.manage'
 const LEARNERS_VIEW = 'learners.view'
+const LEARNERS_IMPORT = 'learners.import'
 const COMPANIES_PERMISSIONS = ['companies.manage', 'companies.profiles.manage']
 
 export const LOGOUT_FAILED_MESSAGE =
@@ -40,7 +41,8 @@ function navItems(user: CurrentUser): NavItem[] {
 
   const items: NavItem[] = [{ to: user.home, label: 'Tableau de bord', end: true }]
   if (COMPANIES_PERMISSIONS.some(can)) items.push({ to: '/entreprises', label: 'Entreprises participantes' })
-  if (can(LEARNERS_VIEW)) items.push({ to: '/apprenants', label: 'Apprenants' })
+  if (can(LEARNERS_VIEW)) items.push({ to: '/apprenants', label: 'Apprenants', end: true })
+  if (can(LEARNERS_IMPORT)) items.push({ to: '/apprenants/import', label: 'Import des apprenants' })
   if (can(USERS_MANAGE)) items.push({ to: '/comptes', label: 'Comptes CME et Direction' })
   if (can(REFERENTIALS_MANAGE)) items.push({ to: '/referentiels', label: 'Référentiels' })
   if (can(AUDIT_VIEW)) items.push({ to: '/journal-audit', label: 'Journal d’audit' })

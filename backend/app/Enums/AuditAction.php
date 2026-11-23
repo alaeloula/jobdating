@@ -40,6 +40,12 @@ enum AuditAction: string
     // consultation de la CNIE). Conservée pour lire les anciennes lignes du journal (contre-revue T-12, constat 7).
     case LearnerCnieViewed = 'learner.cnie_viewed';
 
+    case LearnerImportConfirmed = 'learner_import.confirmed';
+    case LearnerImportCompleted = 'learner_import.completed';
+    case LearnerImportFailed = 'learner_import.failed';
+    case LearnerImportPasswordsDownloaded = 'learner_import.passwords_downloaded';
+    case LearnerImportPasswordsDeleted = 'learner_import.passwords_deleted';
+
     case ReferentialCreated = 'referential.created';
     case ReferentialUpdated = 'referential.updated';
     case ReferentialDeactivated = 'referential.deactivated';
@@ -59,6 +65,8 @@ enum AuditAction: string
             self::LearnerCreated, self::LearnerUpdated, self::LearnerCompetencesUpdated,
             self::LearnerBulkDeactivated, self::LearnerBulkCompetenceAdded => AuditCategory::Apprenants,
             self::LearnerCnieViewed => AuditCategory::Cnie,
+            self::LearnerImportConfirmed, self::LearnerImportCompleted, self::LearnerImportFailed,
+            self::LearnerImportPasswordsDownloaded, self::LearnerImportPasswordsDeleted => AuditCategory::ImportsExports,
             self::ReferentialCreated, self::ReferentialUpdated, self::ReferentialDeactivated,
             self::ReferentialReactivated, self::ReferentialReordered => AuditCategory::Referentiels,
         };
@@ -94,6 +102,11 @@ enum AuditAction: string
             self::LearnerBulkDeactivated => 'Apprenants désactivés en masse',
             self::LearnerBulkCompetenceAdded => 'Compétence ajoutée à une sélection d’apprenants',
             self::LearnerCnieViewed => 'CNIE consultée (ancienne version)',
+            self::LearnerImportConfirmed => 'Import d’apprenants confirmé',
+            self::LearnerImportCompleted => 'Import d’apprenants terminé',
+            self::LearnerImportFailed => 'Import d’apprenants en échec',
+            self::LearnerImportPasswordsDownloaded => 'Fichier des mots de passe téléchargé',
+            self::LearnerImportPasswordsDeleted => 'Fichier des mots de passe supprimé',
             self::ReferentialCreated => 'Référentiel : valeur ajoutée',
             self::ReferentialUpdated => 'Référentiel : valeur modifiée',
             self::ReferentialDeactivated => 'Référentiel : valeur désactivée',

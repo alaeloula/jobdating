@@ -26,3 +26,6 @@ Artisan::command('password-tokens:purge', function (PasswordTokenService $tokens
 })->purpose('Supprime les liens d’activation et de réinitialisation expirés');
 
 Schedule::command('password-tokens:purge')->dailyAt('03:15')->withoutOverlapping();
+
+// Imports d'apprenants abandonnés et dossiers temporaires privés (T-13, plan v2.1).
+Schedule::command('imports:cleanup')->everyFiveMinutes()->withoutOverlapping();

@@ -7,6 +7,7 @@ import AuditLogPage from './pages/AuditLogPage'
 import CompaniesPage from './pages/CompaniesPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import HomePage from './pages/HomePage'
+import LearnerImportPage from './pages/LearnerImportPage'
 import LearnersPage from './pages/LearnersPage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
@@ -53,6 +54,7 @@ export default function AppRoutes() {
             </Route>
             <Route element={<RequireAuth roles={['administrateur']} />}>
               <Route path="/journal-audit" element={<AuditLogPage />} />
+              <Route path="/apprenants/import" element={<LearnerImportPage />} />
               <Route path="/comptes" element={<AccountsPage />} />
             </Route>
             <Route element={<RequireAuth roles={['administrateur', 'cme']} />}>

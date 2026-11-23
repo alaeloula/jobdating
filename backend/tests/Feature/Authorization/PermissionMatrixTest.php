@@ -40,6 +40,7 @@ class PermissionMatrixTest extends TestCase
         'companies.manage' => [true, false, false, false, false],        // Gérer les entreprises (décision du 19/11)
         'companies.profiles.manage' => [true, true, false, false, false], // Profils recherchés (RG-ENTR-08, 19/11)
         'learners.competences.manage' => [true, true, false, false, false], // Compétences des apprenants (16/11)
+        'learners.import' => [true, false, false, false, false],              // Import YouCode School Admin (20/11)
         'program.view' => [true, true, true, true, true],                // Consulter le programme
         'learners.view' => [true, true, true, false, true],              // Consulter la liste des apprenants
         'cv.view' => [true, true, true, true, true],                     // Consulter et télécharger un CV validé
