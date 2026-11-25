@@ -17,12 +17,14 @@ enum AuditCategory: string
     case Referentiels = 'referentiels';
     case Entreprises = 'entreprises';
     case Apprenants = 'apprenants';
+    case Evenements = 'evenements';
 
     public function label(): string
     {
         return match ($this) {
             self::Entreprises => 'Entreprises',
             self::Apprenants => 'Apprenants',
+            self::Evenements => 'Événements et participants',
             self::Connexions => 'Connexions',
             self::Comptes => 'Comptes et mots de passe',
             self::Passages => 'Passages et évaluations',

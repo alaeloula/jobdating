@@ -5,10 +5,14 @@ import AccountsPage from './pages/AccountsPage'
 import ActivationPage from './pages/ActivationPage'
 import AuditLogPage from './pages/AuditLogPage'
 import CompaniesPage from './pages/CompaniesPage'
+import CompanyHomePage from './pages/CompanyHomePage'
+import EventsPage from './pages/EventsPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import HomePage from './pages/HomePage'
+import LearnerDayPage from './pages/LearnerDayPage'
 import LearnerImportPage from './pages/LearnerImportPage'
 import LearnersPage from './pages/LearnersPage'
+import LocationsPage from './pages/LocationsPage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
 import ReferentialsPage from './pages/ReferentialsPage'
@@ -56,16 +60,18 @@ export default function AppRoutes() {
               <Route path="/journal-audit" element={<AuditLogPage />} />
               <Route path="/apprenants/import" element={<LearnerImportPage />} />
               <Route path="/comptes" element={<AccountsPage />} />
+              <Route path="/evenements" element={<EventsPage />} />
             </Route>
             <Route element={<RequireAuth roles={['administrateur', 'cme']} />}>
               <Route path="/referentiels" element={<ReferentialsPage />} />
               <Route path="/entreprises" element={<CompaniesPage />} />
+              <Route path="/emplacements" element={<LocationsPage />} />
             </Route>
             <Route element={<RequireAuth roles={['entreprise']} />}>
-              <Route path="/entreprise" element={<HomePage title="Tableau de bord entreprise" />} />
+              <Route path="/entreprise" element={<CompanyHomePage />} />
             </Route>
             <Route element={<RequireAuth roles={['apprenant']} />}>
-              <Route path="/ma-journee" element={<HomePage title="Ma journée" />} />
+              <Route path="/ma-journee" element={<LearnerDayPage />} />
             </Route>
           </Route>
         </Route>

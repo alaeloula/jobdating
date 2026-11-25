@@ -52,6 +52,7 @@ function mockApi(me: CurrentUser, rows: Company[], handler: (call: Call) => Resp
       if (call.url === '/api/v1/me') return json(200, { data: me })
       const custom = handler(call)
       if (custom) return custom
+      if (call.url === '/api/v1/event-options') return json(200, { data: { current_id: 5, events: [{ id: 5, name: 'JobDating 2026/2027', date: '2026-12-15', is_current: true }] } })
       if (call.url.startsWith('/api/v1/referentials/secteurs/options')) return json(200, { data: [{ id: 3, label: 'Banque', active: true }] })
       if (call.url.startsWith('/api/v1/referentials/filieres/options')) return json(200, { data: [{ id: 1, label: 'JAVA – Java', active: true }] })
       if (call.url.startsWith('/api/v1/referentials/competences/options')) return json(200, { data: [{ id: 7, label: '.NET', active: true }] })
@@ -102,11 +103,12 @@ describe('Entreprises', () => {
     fireEvent.blur(name)
     await waitFor(() => expect(screen.getByLabelText('Nom d’utilisateur')).toHaveValue('acme-maroc'))
     fireEvent.change(screen.getByLabelText('Secteur'), { target: { value: '3' } })
+    await waitFor(() => expect(screen.getByLabelText('Événement')).toHaveValue('5'))
     fireEvent.click(screen.getByRole('button', { name: 'Créer l’entreprise' }))
 
     expect(await screen.findByTestId('sheet-password')).toHaveTextContent(PASSWORD)
     expect(calls.find((c) => c.method === 'POST' && c.url === '/api/v1/companies')?.body).toMatchObject({
-      name: 'Acme Maroc', username: 'acme-maroc', sector_id: '3',
+      name: 'Acme Maroc', username: 'acme-maroc', sector_id: '3', event_id: '5',
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'J’ai imprimé la fiche' }))

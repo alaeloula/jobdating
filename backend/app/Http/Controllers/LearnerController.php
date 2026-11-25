@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\Role;
 use App\Http\Resources\LearnerResource;
+use App\Models\Event;
+use App\Models\EventLearner;
 use App\Models\Learner;
 use App\Models\User;
 use App\Services\Learners\LearnerFilters;
@@ -41,7 +43,27 @@ class LearnerController extends Controller
             ->orderBy('users.last_name')->orderBy('users.first_name')->orderBy('learners.id')
             ->paginate(self::PER_PAGE, page: (int) $request->input('page', 1));
 
-        return LearnerResource::collection($page);
+        if (! $this->isAdmin($request)) {
+            return LearnerResource::collection($page);
+        }
+
+        // État de chaque apprenant de la page dans l'événement courant (T-14), calculé AVANT de créer
+        // la ressource : celle-ci remplace les modèles de la page par des LearnerResource.
+        $event = Event::query()->current()->first();
+        if ($event !== null) {
+            $rows = EventLearner::query()->where('event_id', $event->id)
+                ->whereIn('learner_id', $page->getCollection()->map(fn (Learner $l) => $l->id)->all())->get()->keyBy('learner_id');
+            $page->getCollection()->each(function (Learner $learner) use ($rows): void {
+                $row = $rows->get($learner->id);
+                $learner->setAttribute('event_status', match (true) {
+                    $row === null => 'non_inscrit',
+                    $row->removed_at !== null => 'retire',
+                    default => 'inscrit',
+                });
+            });
+        }
+
+        return LearnerResource::collection($page)->additional(['current_event' => $event === null ? null : ['id' => $event->id, 'name' => $event->fullName()]]);
     }
 
     public function show(Request $request, int $id): LearnerResource

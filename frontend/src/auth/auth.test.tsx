@@ -102,12 +102,13 @@ describe('Connexion', () => {
       '/api/v1/me': () => json(401, { message: 'x', code: 'unauthenticated' }),
       '/sanctum/csrf-cookie': () => new Response(null, { status: 204 }),
       '/api/v1/login': () => json(200, { data: fakeUser('entreprise') }),
+      '/api/v1/me/company-event': () => json(200, { data: null }),
     })
     renderApp('/login')
 
     await fillAndSubmit('societe-fictive', 'mot-de-passe-fictif')
 
-    expect(await screen.findByRole('heading', { name: 'Tableau de bord entreprise' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^Bonjour/ })).toBeInTheDocument()
     const loginCall = fetchMock.mock.calls.find(([url]) => url === '/api/v1/login')
     expect(JSON.parse(String(loginCall?.[1]?.body))).toEqual({
       identifier: 'societe-fictive',
@@ -209,6 +210,7 @@ describe('Gardes de route', () => {
     mockFetch({
       '/api/v1/me': () => json(200, { data: fakeUser('entreprise') }),
       '/sanctum/csrf-cookie': () => new Response(null, { status: 204 }),
+      '/api/v1/me/company-event': () => json(200, { data: null }),
       '/api/v1/logout': () => {
         throw new TypeError('Failed to fetch')
       },
@@ -218,7 +220,7 @@ describe('Gardes de route', () => {
     fireEvent.click((await screen.findAllByRole('button', { name: 'Se déconnecter' }))[0])
 
     expect(await screen.findByRole('alert')).toHaveTextContent('La déconnexion a échoué')
-    expect(screen.getByRole('heading', { name: 'Tableau de bord entreprise' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /^Bonjour/ })).toBeInTheDocument()
     expect(screen.getByTestId('location')).toHaveTextContent('/entreprise')
   })
 

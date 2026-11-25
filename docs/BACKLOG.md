@@ -30,6 +30,7 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 | T-12 (JD-17) | Apprenants : fiche, modification, réinitialisation, désactivation en masse ; **compétences des apprenants saisies par la CME et l'administrateur** (nouvelle permission ; saisie en masse à étudier, point ouvert COMP-01) | ADM-03, DECISIONS 16/11 | J |
 | T-13 (JD-18) | Import du fichier YouCode School Admin (aperçu, contrôles, rapport, fichier des mots de passe) | ADM-04, RG-IMP-01 à 07 | J |
 | T-14 (JD-19) | Événement courant, inscription automatique des participants, emplacements | ADM-05, ADM-07 | J |
+| T-64 (JD-44) | Import des **entreprises** par fichier : modèle, aperçu, doublons signalés, comptes affectés à l'événement choisi, fiches imprimables en une fois, sans e-mail (à faire après T-14) | ADM-04, RG-ENTR-03 à 05, DECISIONS 14/11 | J |
 | T-15 (JD-20) | Programme de l'événement | ADM-08 | J |
 | T-16 (JD-21) | Reprise des **entreprises** de l'ancienne application | CDC 8.8, REP-04 | J |
 

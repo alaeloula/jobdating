@@ -126,6 +126,6 @@ class AuditLogApiTest extends TestCase
             ->getJson('/api/v1/audit-logs/filters')
             ->assertOk()
             ->assertJsonPath('data.categories.0', ['value' => 'connexions', 'label' => 'Connexions'])
-            ->assertJsonCount(9, 'data.categories');
+            ->assertJsonCount(10, 'data.categories');
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Referentials\Campus;
 use App\Models\Referentials\Competence;
 use App\Models\Referentials\Promotion;
 use App\Models\Referentials\SchoolClass;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -73,6 +74,23 @@ class Learner extends Model implements HasAuditLabel
     public function competences(): BelongsToMany
     {
         return $this->belongsToMany(Competence::class, 'learner_competence');
+    }
+
+    /**
+     * Participant VISIBLE d'un événement (plan T-14, § 5) : ligne non retirée, compte actif et non
+     * supprimé. Règle écrite une seule fois, à réutiliser par T-23 et les tâches suivantes.
+     *
+     * @param  Builder<Learner>  $query
+     * @return Builder<Learner>
+     */
+    public function scopeParticipatingIn(Builder $query, int $eventId): Builder
+    {
+        return $query
+            ->whereHas('user', fn (Builder $u) => $u->whereNull('deactivated_at')->whereNull('deleted_at'))
+            ->whereExists(fn ($q) => $q->selectRaw('1')->from('event_learners')
+                ->whereColumn('event_learners.learner_id', 'learners.id')
+                ->where('event_learners.event_id', $eventId)
+                ->whereNull('event_learners.removed_at'));
     }
 
     public function auditLabel(): string

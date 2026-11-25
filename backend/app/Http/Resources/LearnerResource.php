@@ -60,6 +60,10 @@ class LearnerResource extends JsonResource
         if ($admin) {
             $data['phone'] = $user->phone;
             $data['cme_learner_id'] = $learner->cme_learner_id;
+            // État dans l'événement courant (T-14), renseigné par la liste.
+            if ($learner->getAttribute('event_status') !== null) {
+                $data['event_status'] = $learner->getAttribute('event_status');
+            }
         }
 
         return $data;

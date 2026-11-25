@@ -7,6 +7,8 @@ use App\Enums\PasswordTokenType;
 use App\Enums\Role;
 use App\Jobs\ProcessLearnerImport;
 use App\Models\AuditLog;
+use App\Models\Event;
+use App\Models\EventLearner;
 use App\Models\Learner;
 use App\Models\LearnerImport;
 use App\Models\Referentials\Campus;
@@ -457,6 +459,48 @@ class LearnerImportTest extends TestCase
     }
 
     /** Constat 7 : une ligne « inchangée » devenue invalide avant le traitement fait échouer l'import. */
+    // ---------------------------------------------------------------- Inscription à l'événement (T-14)
+
+    public function test_import_inscrit_les_actifs_sans_retablir_un_retrait(): void
+    {
+        $date = now(Event::TIMEZONE)->addMonth()->toDateString();
+        $event = Event::query()->forceCreate(['name' => 'JobDating', 'school_year' => Event::schoolYearFor($date), 'date' => $date, 'location' => 'Campus Fictif', 'is_current' => true]);
+
+        $this->import($this->csv([
+            self::row('ZZ200001', 'Amina', 'amina@example.test'),
+            self::row('ZZ200002', 'Brahim', 'brahim@example.test'),
+            self::row('ZZ200003', 'Chama', 'chama@example.test', status: 'Inactif'),
+        ]));
+        $amina = Learner::query()->where('cnie', 'ZZ200001')->firstOrFail();
+        $brahim = Learner::query()->where('cnie', 'ZZ200002')->firstOrFail();
+        $chama = Learner::query()->where('cnie', 'ZZ200003')->firstOrFail();
+        $this->assertSame(2, EventLearner::query()->where('event_id', $event->id)->whereNull('removed_at')->count());
+        $this->assertFalse(EventLearner::query()->where('learner_id', $chama->id)->exists());
+
+        // Retrait de Brahim, puis deux imports : lignes inchangées (avec une création, car un fichier
+        // sans changement est refusé), puis lignes modifiées. Chama est réactivée.
+        EventLearner::query()->where('learner_id', $brahim->id)->update(['removed_at' => now()]);
+        $password = $amina->user->password;
+        Notification::fake();
+        $this->import($this->csv([
+            self::row('ZZ200001', 'Amina', 'amina@example.test'),
+            self::row('ZZ200002', 'Brahim', 'brahim@example.test'),
+            self::row('ZZ200003', 'Chama', 'chama@example.test', status: 'Inactif'),
+            self::row('ZZ200004', 'Driss', 'driss@example.test'),
+        ]));
+        $this->assertNotNull(EventLearner::query()->where('learner_id', $brahim->id)->value('removed_at'));
+        $this->assertTrue(EventLearner::query()->where('learner_id', $amina->id)->whereNull('removed_at')->exists());
+        $this->assertSame($password, $amina->user->refresh()->password);
+        Notification::assertNotSentTo([$amina->user, $brahim->user, $chama->user], GeneratedPasswordNotification::class);
+
+        $this->import($this->csv([
+            self::row('ZZ200002', 'Brahim Modifié', 'brahim@example.test'),
+            self::row('ZZ200003', 'Chama', 'chama@example.test'),
+        ]));
+        $this->assertNotNull(EventLearner::query()->where('learner_id', $brahim->id)->value('removed_at'));
+        $this->assertTrue(EventLearner::query()->where('learner_id', $chama->id)->whereNull('removed_at')->exists());
+    }
+
     public function test_ligne_inchangee_revalidee_au_traitement(): void
     {
         $this->import($this->csv([self::row('ZZ100001', 'Amina', 'amina@example.test')]));

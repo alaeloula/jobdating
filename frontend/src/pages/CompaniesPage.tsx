@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useMe } from '../auth/queries'
+import ParticipantsPanel from '../events/ParticipantsPanel'
+import { useRefreshEvents } from '../events/api'
 import { ApiError } from '../lib/api'
 import CompanyForm from '../companies/CompanyForm'
 import CredentialsSheet from '../companies/CredentialsSheet'
@@ -7,6 +9,7 @@ import ProfilesPanel from '../companies/ProfilesPanel'
 import { resetCompanyPassword, useCompanies, useCompanyMutations, type Company, type CompanyFilters, type Credentials } from '../companies/api'
 
 const COMPANIES_MANAGE = 'companies.manage'
+const PARTICIPANTS_MANAGE = 'participants.manage'
 const button = 'min-h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50'
 
 /**
@@ -62,15 +65,19 @@ function ProfileBadges({ company }: { company: Company }) {
 }
 
 type Panel ={ kind: 'new' } | { kind: 'edit'; company: Company } | { kind: 'profiles'; company: Company } | null
-type Pending = { kind: 'reset' | 'deactivate'; company: Company } | null
+type Pending = { kind: 'reset' | 'deactivate'; company: Pick<Company, 'id' | 'name'>; eventId?: number } | null
 
 /**
- * Entreprises (ADM-02, maquette admin-03 sans les éléments d'événement : T-14).
- * Administrateur : gestion complète ; CME : consultation et profils recherchés.
+ * Entreprises (ADM-02, ADM-07, maquette admin-03). Administrateur : participantes de l'événement et
+ * gestion complète ; CME : consultation et profils recherchés.
  */
 export default function CompaniesPage() {
   const { data: me } = useMe()
   const canManage = me?.permissions.includes(COMPANIES_MANAGE) ?? false
+  const canParticipants = me?.permissions.includes(PARTICIPANTS_MANAGE) ?? false
+  const [tab, setTab] = useState<'participants' | 'all'>('participants')
+  const showParticipants = canParticipants && tab === 'participants'
+  const refreshEvents = useRefreshEvents()
   const [filters, setFilters] = useState<CompanyFilters>({ search: '', status: '', page: 1 })
   const companies = useCompanies(filters)
   const { action, refresh } = useCompanyMutations()
@@ -91,14 +98,15 @@ export default function CompaniesPage() {
 
   const confirm = async () => {
     if (!pending) return
-    const { kind, company } = pending
+    const { kind, company, eventId } = pending
     setPending(null)
     try {
       if (kind === 'reset') {
-        const reset = await resetCompanyPassword(company.id)
+        const reset = await resetCompanyPassword(company.id, eventId)
         setPanel(null)
         setSheet({ company: reset.data, credentials: reset.credentials })
         await refresh()
+        if (canParticipants) await refreshEvents()
       } else {
         await action.mutateAsync({ id: company.id, name: 'deactivate' })
         say(`${company.name} désactivée : ses recruteurs sont déconnectés.`)
@@ -160,9 +168,25 @@ export default function CompaniesPage() {
         </div>
       )}
 
+      {canParticipants && (
+        <div role="group" aria-label="Vue des entreprises" className="flex gap-1 rounded-xl bg-slate-200 p-1 sm:w-fit">
+          {(
+            [
+              ['participants', 'Participantes à l’événement'],
+              ['all', 'Toutes les entreprises'],
+            ] as const
+          ).map(([value, label]) => (
+            <button key={value} type="button" aria-pressed={tab === value} onClick={() => setTab(value)} className={`rounded-lg px-3 py-2 text-sm font-semibold ${tab === value ? 'bg-white' : 'text-slate-700'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Colonne de droite seulement quand un formulaire ou une fiche est ouvert : la liste prend sinon toute la largeur. */}
       <div className={`grid gap-4 ${panel || sheet ? 'lg:grid-cols-[minmax(0,1fr)_24rem]' : ''}`}>
-        <section className="space-y-3">
+        {showParticipants && <ParticipantsPanel onReset={(company, eventId) => setPending({ kind: 'reset', company, eventId })} />}
+        <section className={`space-y-3 ${showParticipants ? 'hidden' : ''}`}>
           <div className="flex flex-wrap gap-2">
             <input
               type="search"
@@ -305,7 +329,7 @@ export default function CompaniesPage() {
               companyId={sheet.company.id}
               companyName={sheet.company.name}
               credentials={sheet.credentials}
-              onPrinted={() => void refresh()}
+              onPrinted={() => void (canParticipants ? refreshEvents() : refresh())}
               onClose={() => setSheet(null)}
             />
           )}
@@ -315,6 +339,7 @@ export default function CompaniesPage() {
               onCreated={(company, credentials) => {
                 setPanel(null)
                 setSheet({ company, credentials })
+                if (canParticipants) void refreshEvents()
                 say(`Entreprise ${company.name} créée. Imprimez sa fiche de connexion.`)
               }}
               onDone={say}

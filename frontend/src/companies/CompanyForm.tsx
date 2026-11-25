@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
+import { useEventOptions } from '../events/api'
 import { useReferentialOptions } from '../referentials/api'
 import { ApiError } from '../lib/api'
 import { createCompany, removeLogo, replaceLogo, suggestUsername, useCompanyMutations, type Company, type Credentials } from './api'
@@ -8,7 +10,8 @@ const input = 'mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2'
 type Errors = Record<string, string[]>
 
 /**
- * Nouvelle entreprise / modification (maquette admin-04, sans événement ni emplacement : T-14).
+ * Nouvelle entreprise / modification (maquette admin-04). À la création, l'événement est obligatoire
+ * (RG-ENTR-03) : le courant est présélectionné ; étage et table restent facultatifs.
  * À la création, le nom d'utilisateur est proposé à partir du nom et reste modifiable ; le
  * mot de passe est généré par le serveur et renvoyé une seule fois (onCreated).
  */
@@ -23,6 +26,8 @@ export default function CompanyForm({
 }) {
   const sectors = useReferentialOptions('secteurs')
   const { update, refresh } = useCompanyMutations()
+  const eventOptions = useEventOptions(company === null)
+  const [chosenEvent, setChosenEvent] = useState('')
   const [values, setValues] = useState({
     name: company?.name ?? '',
     sector_id: company?.sector?.id ? String(company.sector.id) : '',
@@ -31,6 +36,8 @@ export default function CompanyForm({
     contact_name: company?.contact_name ?? '',
     contact_email: company?.contact_email ?? '',
     username: '',
+    floor: '',
+    table_label: '',
   })
   const [logo, setLogo] = useState<File | null>(null)
   const [errors, setErrors] = useState<Errors>({})
@@ -38,6 +45,9 @@ export default function CompanyForm({
   const [pending, setPending] = useState(false)
 
   const set = (name: keyof typeof values, value: string) => setValues((v) => ({ ...v, [name]: value }))
+  const events = eventOptions.data?.events ?? []
+  const eventId = chosenEvent !== '' && events.some((e) => String(e.id) === chosenEvent) ? chosenEvent : String(eventOptions.data?.current_id ?? '')
+  const noEvent = eventOptions.isSuccess && events.length === 0
 
   const propose = async () => {
     if (company || values.name.trim() === '' || values.username !== '') return
@@ -70,7 +80,7 @@ export default function CompanyForm({
     try {
       if (!company) {
         const form = new FormData()
-        Object.entries({ ...fields(), username: values.username }).forEach(([k, v]) => {
+        Object.entries({ ...fields(), username: values.username, event_id: eventId, floor: values.floor.trim(), table_label: values.table_label.trim() }).forEach(([k, v]) => {
           if (v !== null && v !== '') form.append(k, String(v))
         })
         if (logo) form.append('logo', logo)
@@ -125,6 +135,56 @@ export default function CompanyForm({
       )}
       <form onSubmit={(e) => void submit(e)} noValidate className="mt-4 space-y-4">
         {text('name', 'Nom de l’entreprise')}
+        {!company && (
+          <div>
+            <label htmlFor="company-event_id" className="block font-semibold text-slate-700">
+              Événement
+            </label>
+            <select
+              id="company-event_id"
+              value={eventId}
+              disabled={!eventOptions.isSuccess || noEvent}
+              aria-invalid={errors.event_id ? true : undefined}
+              onChange={(e) => {
+                setChosenEvent(e.target.value)
+                setErrors(({ event_id: _old, ...rest }) => rest)
+              }}
+              className={input}
+            >
+              <option value="">{eventOptions.isPending ? 'Chargement…' : 'Choisir un événement'}</option>
+              {events.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                  {e.is_current ? ' (courant)' : ''}
+                </option>
+              ))}
+            </select>
+            {eventOptions.isError && (
+              <p role="alert" className="mt-1 text-sm text-red-700">
+                Les événements n’ont pas pu être chargés.{' '}
+                <button type="button" className="font-semibold underline" onClick={() => void eventOptions.refetch()}>
+                  Réessayer
+                </button>
+              </p>
+            )}
+            {noEvent && (
+              <p className="mt-1 text-sm text-slate-700">
+                Aucun événement disponible. Créez-en un dans{' '}
+                <Link to="/evenements" className="font-semibold text-indigo-700 underline">
+                  Événement et programme
+                </Link>
+                .
+              </p>
+            )}
+            {errors.event_id && <p className="mt-1 text-sm text-red-700">{errors.event_id[0]}</p>}
+          </div>
+        )}
+        {!company && (
+          <div className="grid grid-cols-2 gap-3">
+            {text('floor', 'Étage (facultatif)')}
+            {text('table_label', 'Table (facultative)')}
+          </div>
+        )}
         <div>
           <label htmlFor="company-sector_id" className="block font-semibold text-slate-700">
             Secteur
@@ -176,7 +236,7 @@ export default function CompanyForm({
             <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-600">Mot de passe : généré automatiquement à la validation.</p>
           </>
         )}
-        <button type="submit" disabled={pending} className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-bold text-white hover:bg-indigo-700 disabled:opacity-60">
+        <button type="submit" disabled={pending || (!company && noEvent)} className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-bold text-white hover:bg-indigo-700 disabled:opacity-60">
           {pending ? 'Enregistrement…' : company ? 'Enregistrer' : 'Créer l’entreprise'}
         </button>
       </form>

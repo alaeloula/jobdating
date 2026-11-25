@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\Accounts\AccountRuleException;
 use App\Services\AuditLogger;
 use App\Services\Auth\SessionRevoker;
+use App\Services\Events\EventParticipationService;
 use App\Services\Passwords\PasswordGenerator;
 use App\Services\Passwords\PasswordTokenService;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -46,13 +47,19 @@ class CompanyService
         private readonly SessionRevoker $sessions,
         private readonly PasswordTokenService $tokens,
         private readonly AuditLogger $audit,
+        private readonly EventParticipationService $participation,
     ) {}
 
     /**
+     * Création complète dans UNE transaction (plan T-14, § 5) : événement verrouillé et contrôlé, compte,
+     * fiche, participation et journal. Toute erreur supprime le nouveau logo. `$placement` est absent
+     * seulement pour une reprise (T-16) : l'API l'exige toujours (RG-ENTR-03).
+     *
      * @param  array<string, mixed>  $data  champs de la fiche + username
+     * @param  array{event_id: int, floor?: string|null, table_label?: string|null}|null  $placement
      * @return array{company: Company, password: string}
      */
-    public function create(array $data, ?UploadedFile $logo, User $admin): array
+    public function create(array $data, ?UploadedFile $logo, User $admin, ?array $placement = null): array
     {
         $password = PasswordGenerator::generate();
         $logoPath = $logo !== null ? $this->storeLogo($logo) : null;
@@ -62,7 +69,8 @@ class CompanyService
             // Annulation par un appelant qui englobe cette création : le nouveau fichier est supprimé
             // (revue Codex T-11, constat 1). Une erreur interne est traitée par le catch ci-dessous.
             $this->discardIfEnclosingRollsBack($discard);
-            $company = DB::transaction(function () use ($data, $logoPath, $password, $admin): Company {
+            $company = DB::transaction(function () use ($data, $logoPath, $password, $admin, $placement): Company {
+                $event = $placement !== null ? $this->participation->lockEligibleEvent($placement['event_id']) : null;
                 $this->assertActive(Sector::class, $data['sector_id'] ?? null, 'sector_id', 'Ce secteur n’est plus proposé.');
 
                 $user = new User;
@@ -87,9 +95,12 @@ class CompanyService
                 ])->save();
 
                 $this->audit->record(AuditAction::CompanyCreated, $company, new: $this->snapshot($company) + ['nom_utilisateur' => $user->username], actor: $admin);
+                if ($event !== null) {
+                    $this->participation->attachNewCompany($event, $company, $placement['floor'] ?? null, $placement['table_label'] ?? null, $admin);
+                }
 
                 return $company;
-            });
+            }, self::ATTEMPTS);
         } catch (UniqueConstraintViolationException $e) {
             $discard();
             throw ValidationException::withMessages([

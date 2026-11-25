@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Services\Companies\CompanyService;
 use App\Services\Companies\UsernameSuggester;
+use App\Services\Events\EventParticipationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,10 @@ class CompanyController extends Controller
 
     private const RELATIONS = ['user', 'sector', 'filieres', 'competences', 'recruiters'];
 
-    public function __construct(private readonly CompanyService $companies) {}
+    public function __construct(
+        private readonly CompanyService $companies,
+        private readonly EventParticipationService $participation,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -73,14 +77,23 @@ class CompanyController extends Controller
         $data = $request->validate($this->rules(true) + [
             'filiere_ids' => ['missing'],
             'competence_ids' => ['missing'],
+            // Événement obligatoire (RG-ENTR-03) : éligibilité contrôlée sous verrou par le service.
+            'event_id' => ['required', 'integer'],
+            'floor' => ['nullable', 'string', 'max:50'],
+            'table_label' => ['nullable', 'string', 'max:50'],
             'username' => ['required', 'string', 'min:'.UsernameSuggester::MIN, 'max:'.UsernameSuggester::MAX,
                 'regex:'.UsernameSuggester::PATTERN, Rule::unique('users', 'username')],
         ], $this->messages());
 
-        $created = $this->companies->create($this->normalize($data), $request->file('logo'), $this->actor($request));
+        $eventId = (int) $data['event_id'];
+        $created = $this->companies->create($this->normalize($data), $request->file('logo'), $this->actor($request), [
+            'event_id' => $eventId,
+            'floor' => $data['floor'] ?? null,
+            'table_label' => $data['table_label'] ?? null,
+        ]);
         $company = $created['company']->load(self::RELATIONS);
 
-        return $this->withCredentials($company, $created['password'], 201);
+        return $this->withCredentials($company, $created['password'], 201, $this->participation->credentialsContext($company, $eventId));
     }
 
     public function update(Request $request, int $id): CompanyResource
@@ -128,9 +141,13 @@ class CompanyController extends Controller
 
     public function resetPassword(Request $request, int $id): JsonResponse
     {
-        $reset = $this->companies->resetPassword($this->find($id), $this->actor($request));
+        $eventId = $request->validate(['event_id' => ['nullable', 'integer']], ['event_id.integer' => 'Valeur invalide.'])['event_id'] ?? null;
+        $company = $this->find($id);
+        // Contexte contrôlé AVANT tout effet : un refus ne change ni le mot de passe ni sa version.
+        $context = $this->participation->credentialsContext($company, $eventId === null ? null : (int) $eventId);
+        $reset = $this->companies->resetPassword($company, $this->actor($request));
 
-        return $this->withCredentials($reset['company']->load(self::RELATIONS), $reset['password'], 200);
+        return $this->withCredentials($reset['company']->load(self::RELATIONS), $reset['password'], 200, $context);
     }
 
     public function credentialsPrinted(Request $request, int $id): CompanyResource
@@ -176,8 +193,12 @@ class CompanyController extends Controller
         return $user;
     }
 
-    /** Fiche + identifiants affichés UNE seule fois (RG-ENTR-05) ; jamais en cache. */
-    private function withCredentials(Company $company, string $password, int $status): JsonResponse
+    /**
+     * Fiche + identifiants affichés UNE seule fois (RG-ENTR-05) ; jamais en cache.
+     *
+     * @param  array<string, mixed>|null  $event  participation imprimée sur la fiche de connexion
+     */
+    private function withCredentials(Company $company, string $password, int $status, ?array $event): JsonResponse
     {
         return response()->json([
             'data' => CompanyResource::make($company)->resolve(),
@@ -186,6 +207,7 @@ class CompanyController extends Controller
                 'password' => $password,
                 'version' => $company->credentials_version,
                 'url' => config('app.frontend_url'),
+                'event' => $event,
             ],
         ], $status)->header('Cache-Control', 'no-store, private');
     }
@@ -241,6 +263,8 @@ class CompanyController extends Controller
             'website.url' => 'Adresse de site invalide : elle doit commencer par http:// ou https://.',
             'contact_email.email' => 'Adresse e-mail invalide.',
             'sector_id.exists' => 'Secteur inconnu.',
+            'event_id.required' => 'Choisissez un événement.',
+            'event_id.integer' => 'Choisissez un événement.',
             'username.regex' => 'Lettres minuscules, chiffres et tirets seulement (ex. societe-generale).',
             'username.min' => 'Au moins 3 caractères.',
             'username.max' => '50 caractères au plus.',
