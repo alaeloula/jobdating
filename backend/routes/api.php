@@ -13,9 +13,12 @@ use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\PasswordLinkRequestController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\EventParticipantController;
 use App\Http\Controllers\LearnerController;
 use App\Http\Controllers\LearnerImportController;
 use App\Http\Controllers\MyCompanyController;
+use App\Http\Controllers\MyEventController;
 use App\Http\Controllers\ReferentialController;
 use App\Http\Controllers\StaffAccountController;
 use Illuminate\Support\Facades\Route;
@@ -93,6 +96,39 @@ Route::middleware(['auth:sanctum', 'session.valid'])->group(function () {
         Route::post('/companies/{id}/credentials-printed', [CompanyController::class, 'credentialsPrinted'])->whereNumber('id')
             ->name('companies.credentials-printed');
     });
+
+    // Événements (ADM-05, T-14) : administrateur.
+    Route::middleware('permission:'.Permission::EventsManage->value)->group(function () {
+        Route::get('/events', [EventController::class, 'index'])->name('events.index');
+        Route::post('/events', [EventController::class, 'store'])->name('events.store');
+        Route::delete('/events/current', [EventController::class, 'unsetCurrent'])->name('events.current.unset');
+        Route::get('/events/{id}', [EventController::class, 'show'])->whereNumber('id')->name('events.show');
+        Route::patch('/events/{id}', [EventController::class, 'update'])->whereNumber('id')->name('events.update');
+        Route::delete('/events/{id}', [EventController::class, 'destroy'])->whereNumber('id')->name('events.destroy');
+        Route::post('/events/{id}/current', [EventController::class, 'setCurrent'])->whereNumber('id')->name('events.current.set');
+        Route::post('/events/{id}/archive', [EventController::class, 'archive'])->whereNumber('id')->name('events.archive');
+        Route::post('/events/{id}/unarchive', [EventController::class, 'unarchive'])->whereNumber('id')->name('events.unarchive');
+    });
+    Route::get('/event-options', [EventController::class, 'options'])->middleware($manage)->name('events.options');
+    Route::get('/events/current/summary', [EventController::class, 'currentSummary'])
+        ->middleware('permission:'.Permission::LocationsManage->value)->name('events.current.summary');
+
+    // Participants (ADM-07, T-14) : ajouts et retraits par l'administrateur ; emplacements aussi par la CME.
+    Route::get('/events/{id}/companies', [EventParticipantController::class, 'companies'])->whereNumber('id')
+        ->middleware('permission:'.Permission::ParticipantsManage->value.'|'.Permission::LocationsManage->value)->name('events.companies');
+    Route::patch('/events/{id}/companies/{company}/location', [EventParticipantController::class, 'updateLocation'])
+        ->whereNumber(['id', 'company'])->middleware('permission:'.Permission::LocationsManage->value)->name('events.companies.location');
+    Route::middleware('permission:'.Permission::ParticipantsManage->value)->group(function () {
+        Route::get('/events/{id}/available-companies', [EventParticipantController::class, 'availableCompanies'])->whereNumber('id')->name('events.companies.available');
+        Route::post('/events/{id}/companies', [EventParticipantController::class, 'addCompanies'])->whereNumber('id')->name('events.companies.add');
+        Route::delete('/events/{id}/companies/{company}', [EventParticipantController::class, 'removeCompany'])->whereNumber(['id', 'company'])->name('events.companies.remove');
+        Route::delete('/events/{id}/learners/{learner}', [EventParticipantController::class, 'removeLearner'])->whereNumber(['id', 'learner'])->name('events.learners.remove');
+        Route::post('/events/{id}/learners/{learner}/reinstate', [EventParticipantController::class, 'reinstateLearner'])->whereNumber(['id', 'learner'])->name('events.learners.reinstate');
+    });
+
+    // Événement du compte connecté (ENT-01, APP-00) : le courant, pour son propriétaire uniquement.
+    Route::get('/me/company-event', [MyEventController::class, 'company'])->name('me.company-event');
+    Route::get('/me/learner-event', [MyEventController::class, 'learner'])->name('me.learner-event');
 
     // Apprenants (ADM-03, T-12). Limités aux RÔLES administrateur, CME et Direction : l'entreprise
     // a `learners.view` pour T-23 (participants de ses événements) et n'accède jamais à ces routes.

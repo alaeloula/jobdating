@@ -9,7 +9,9 @@ use App\Models\Referentials\Campus;
 use App\Models\Referentials\Promotion;
 use App\Models\Referentials\SchoolClass;
 use App\Models\User;
+use App\Services\Events\EventParticipationService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Comptes de démonstration fictifs, un par rôle, pour le développement LOCAL uniquement.
@@ -75,15 +77,31 @@ class DemoAccountsSeeder extends Seeder
 
             $user->setRole($account['role']);
 
-            // Fiche de l'entreprise de démonstration (T-11), sans événement (affectation : T-14).
+            // Fiche de l'entreprise de démonstration (T-11), sans événement : l'administrateur l'ajoute.
             if ($account['role'] === Role::Entreprise && ! Company::query()->where('user_id', $user->getKey())->exists()) {
                 Company::query()->forceCreate(['user_id' => $user->getKey(), 'name' => 'Entreprise Démo', 'credentials_version' => 1]);
             }
 
             if ($account['role'] === Role::Apprenant) {
                 $this->learnerRecord($user);
+                $this->enrollDemoLearner($user);
             }
         }
+    }
+
+    /**
+     * Inscription idempotente à l'événement courant, s'il existe (T-14) : un retrait n'est jamais
+     * annulé. L'entreprise de démonstration reste à ajouter par l'administrateur.
+     */
+    private function enrollDemoLearner(User $user): void
+    {
+        $learnerId = Learner::query()->where('user_id', $user->getKey())->value('id');
+        if ($learnerId === null) {
+            return;
+        }
+
+        $participation = app(EventParticipationService::class);
+        DB::transaction(fn () => $participation->enroll($participation->beginActivation(), [(int) $learnerId]));
     }
 
     /**

@@ -3,10 +3,12 @@
 namespace App\Providers;
 
 use App\Contracts\ClassUsage;
+use App\Contracts\EventUsage;
 use App\Contracts\TagUsage;
 use App\Enums\AuditAction;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Events\NoEventUsage;
 use App\Services\Learners\LearnerClassUsage;
 use App\Services\Referentials\NoTagUsage;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -28,6 +30,8 @@ class AppServiceProvider extends ServiceProvider
         // étiquettes utilisées dans des évaluations (à remplacer par T-31).
         $this->app->bind(ClassUsage::class, LearnerClassUsage::class);
         $this->app->bind(TagUsage::class, NoTagUsage::class);
+        // Passages d'un événement (T-14) : à remplacer par T-30.
+        $this->app->bind(EventUsage::class, NoEventUsage::class);
     }
 
     /**

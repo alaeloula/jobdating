@@ -46,6 +46,19 @@ enum AuditAction: string
     case LearnerImportPasswordsDownloaded = 'learner_import.passwords_downloaded';
     case LearnerImportPasswordsDeleted = 'learner_import.passwords_deleted';
 
+    case EventCreated = 'event.created';
+    case EventUpdated = 'event.updated';
+    case EventCurrentSet = 'event.current_set';
+    case EventCurrentUnset = 'event.current_unset';
+    case EventArchived = 'event.archived';
+    case EventUnarchived = 'event.unarchived';
+    case EventDeleted = 'event.deleted';
+    case EventCompanyAdded = 'event_company.added';
+    case EventCompanyRemoved = 'event_company.removed';
+    case EventCompanyLocationUpdated = 'event_company.location_updated';
+    case EventLearnerRemoved = 'event_learner.removed';
+    case EventLearnerReinstated = 'event_learner.reinstated';
+
     case ReferentialCreated = 'referential.created';
     case ReferentialUpdated = 'referential.updated';
     case ReferentialDeactivated = 'referential.deactivated';
@@ -67,6 +80,10 @@ enum AuditAction: string
             self::LearnerCnieViewed => AuditCategory::Cnie,
             self::LearnerImportConfirmed, self::LearnerImportCompleted, self::LearnerImportFailed,
             self::LearnerImportPasswordsDownloaded, self::LearnerImportPasswordsDeleted => AuditCategory::ImportsExports,
+            self::EventCreated, self::EventUpdated, self::EventCurrentSet, self::EventCurrentUnset,
+            self::EventArchived, self::EventUnarchived, self::EventDeleted, self::EventCompanyAdded,
+            self::EventCompanyRemoved, self::EventCompanyLocationUpdated, self::EventLearnerRemoved,
+            self::EventLearnerReinstated => AuditCategory::Evenements,
             self::ReferentialCreated, self::ReferentialUpdated, self::ReferentialDeactivated,
             self::ReferentialReactivated, self::ReferentialReordered => AuditCategory::Referentiels,
         };
@@ -107,6 +124,18 @@ enum AuditAction: string
             self::LearnerImportFailed => 'Import d’apprenants en échec',
             self::LearnerImportPasswordsDownloaded => 'Fichier des mots de passe téléchargé',
             self::LearnerImportPasswordsDeleted => 'Fichier des mots de passe supprimé',
+            self::EventCreated => 'Événement créé',
+            self::EventUpdated => 'Événement modifié',
+            self::EventCurrentSet => 'Événement désigné comme courant',
+            self::EventCurrentUnset => 'Statut courant retiré',
+            self::EventArchived => 'Événement archivé',
+            self::EventUnarchived => 'Événement désarchivé',
+            self::EventDeleted => 'Événement supprimé',
+            self::EventCompanyAdded => 'Entreprise ajoutée à un événement',
+            self::EventCompanyRemoved => 'Entreprise retirée d’un événement',
+            self::EventCompanyLocationUpdated => 'Emplacement d’une entreprise modifié',
+            self::EventLearnerRemoved => 'Apprenant retiré d’un événement',
+            self::EventLearnerReinstated => 'Apprenant réinscrit à un événement',
             self::ReferentialCreated => 'Référentiel : valeur ajoutée',
             self::ReferentialUpdated => 'Référentiel : valeur modifiée',
             self::ReferentialDeactivated => 'Référentiel : valeur désactivée',

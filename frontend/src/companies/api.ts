@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { Placement } from '../events/api'
 import { apiRequest } from '../lib/api'
 
 export interface RefValue {
@@ -39,6 +40,8 @@ export interface Credentials {
   password: string
   version: number
   url: string
+  /** Participation imprimée sur la fiche (T-14) ; absente si l'entreprise n'a pas d'événement. */
+  event?: Placement | null
 }
 
 export interface CompanyFilters {
@@ -94,8 +97,8 @@ export async function createCompany(form: FormData): Promise<{ data: Company; cr
   return apiRequest('/companies', { method: 'POST', body: form })
 }
 
-export async function resetCompanyPassword(id: number): Promise<{ data: Company; credentials: Credentials }> {
-  return apiRequest(`/companies/${id}/reset-password`, { method: 'POST' })
+export async function resetCompanyPassword(id: number, eventId?: number): Promise<{ data: Company; credentials: Credentials }> {
+  return apiRequest(`/companies/${id}/reset-password`, { method: 'POST', ...(eventId ? { body: { event_id: eventId } } : {}) })
 }
 
 export async function confirmPrinted(id: number, version: number): Promise<void> {

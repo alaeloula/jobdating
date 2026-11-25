@@ -16,6 +16,7 @@ use App\Notifications\GeneratedPasswordNotification;
 use App\Services\Accounts\AccountRuleException;
 use App\Services\AuditLogger;
 use App\Services\Auth\SessionRevoker;
+use App\Services\Events\EventParticipationService;
 use App\Services\Passwords\PasswordAccess;
 use App\Services\Passwords\PasswordGenerator;
 use App\Services\Passwords\PasswordTokenService;
@@ -30,6 +31,7 @@ use RuntimeException;
  * Apprenants (ADM-03, T-12). Toutes les écritures en transaction, rejouées en cas d'interblocage.
  *
  * ORDRE DE VERROUILLAGE (contrat T-02, plan T-12 §3), à respecter aussi par T-13 :
+ *   0. pour un chemin qui rend un apprenant ACTIF : `event_locks` en partagé (T-14, `beginActivation`) ;
  *   1. les CLASSES concernées, par identifiant croissant (`ClassUsage`, changement de filière) ;
  *   2. le COMPTE `users` ;
  *   3. la FICHE `learners`.
@@ -53,6 +55,7 @@ class LearnerService
         private readonly SessionRevoker $sessions,
         private readonly PasswordTokenService $tokens,
         private readonly AuditLogger $audit,
+        private readonly EventParticipationService $participation,
     ) {}
 
     // ------------------------------------------------------------------ Fiche
@@ -70,13 +73,17 @@ class LearnerService
         $cnie = $this->cnie($data['cnie']);
 
         $learner = $this->unique(fn () => DB::transaction(function () use ($data, $cnie, $password, $admin): Learner {
+            $eventId = $this->participation->beginActivation();
             $this->lockClasses([(int) $data['class_id']]);
             $this->assertActive(Campus::class, $data['campus_id'], 'campus_id', 'Ce campus n’est plus proposé.');
             $this->assertActive(Promotion::class, $data['promotion_id'], 'promotion_id', 'Cette promotion n’est plus proposée.');
             $this->assertActive(SchoolClass::class, $data['class_id'], 'class_id', 'Cette classe n’est plus proposée.');
             $this->assertCnieFree($cnie, null);
 
-            return $this->insert(['cnie' => $cnie] + $data, $password, $password, true, $admin);
+            $learner = $this->insert(['cnie' => $cnie] + $data, $password, $password, true, $admin);
+            $this->participation->enroll($eventId, [$learner->id]);
+
+            return $learner;
         }, self::ATTEMPTS));
 
         return ['learner' => $learner, 'password' => $password];
@@ -170,10 +177,12 @@ class LearnerService
     public function reactivate(Learner $learner): Learner
     {
         return DB::transaction(function () use ($learner): Learner {
+            $eventId = $this->participation->beginActivation();
             $user = $this->lockUser($learner);
             if ($user->isDeactivated()) {
                 $user->forceFill(['deactivated_at' => null])->save();
             }
+            $this->participation->enroll($eventId, [$learner->id]);
 
             return $learner->setRelation('user', $user);
         }, self::ATTEMPTS);
@@ -193,9 +202,13 @@ class LearnerService
     public function restore(Learner $learner): Learner
     {
         return DB::transaction(function () use ($learner): Learner {
+            $eventId = $this->participation->beginActivation();
             $user = $this->lockUser($learner, allowDeleted: true);
             if ($user->trashed()) {
                 $user->restore();
+            }
+            if (! $user->isDeactivated()) {
+                $this->participation->enroll($eventId, [$learner->id]);
             }
 
             return $learner->setRelation('user', $user);

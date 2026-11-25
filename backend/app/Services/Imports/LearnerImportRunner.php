@@ -10,6 +10,7 @@ use App\Models\Referentials\Promotion;
 use App\Models\Referentials\SchoolClass;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Events\EventParticipationService;
 use App\Services\Learners\ClassMovedException;
 use App\Services\Learners\LearnerService;
 use App\Services\Passwords\PasswordGenerator;
@@ -29,7 +30,8 @@ use Throwable;
  * - Prise en charge EXCLUSIVE : « en attente » → « en cours » par une mise à jour conditionnelle.
  * - Mots de passe préparés et hachés HORS transaction, pour TOUS les nouveaux comptes, et réutilisés
  *   par les reprises (jamais rehachés).
- * - UNE transaction, verrous dans l'ordre : classes → comptes → fiches, chaque fois par identifiant.
+ * - UNE transaction, verrous dans l'ordre : `event_locks` (partagé, T-14) → classes → comptes → fiches,
+ *   chaque fois par identifiant.
  * - Revalidation sous les verrous ; déplacement de classe ou interblocage → reprise complète (3 fois).
  * - Finalisation dans la MÊME transaction : comptes, rapport, mots de passe chiffrés, journal, statut
  *   « terminé », `payload` effacé. Un import terminé n'est jamais réécrit (C2).
@@ -48,6 +50,7 @@ class LearnerImportRunner
     public function __construct(
         private readonly LearnerService $learners,
         private readonly AuditLogger $audit,
+        private readonly EventParticipationService $participation,
     ) {}
 
     public function run(int $importId): void
@@ -143,6 +146,10 @@ class LearnerImportRunner
         $rowClasses = array_values(array_unique(array_map(fn (array $r) => (int) $r['class_id'], $rows)));
 
         DB::transaction(function () use ($import, $rows, $credentials, $author, $updates, $currentClasses, $rowClasses): void {
+            // Verrou partagé pris EN PREMIER, à chaque reprise (plan T-14, § 6).
+            $eventId = $this->participation->beginActivation();
+            $enrolled = [];
+
             // (a) Classes des lignes et classes actuelles des apprenants connus, par identifiant croissant.
             $classIds = array_values(array_unique([...$rowClasses, ...$currentClasses]));
             sort($classIds);
@@ -205,8 +212,9 @@ class LearnerImportRunner
 
                 if ($r['decision'] === LearnerImportPlanner::CREATE) {
                     $credential = $credentials[$r['line']];
-                    $this->learners->importCreate(['cnie' => $r['cnie']] + $data($r), $credential['password'], $credential['hash'], (bool) $r['active'], $author ?? throw new ImportConflictException);
+                    $created = $this->learners->importCreate(['cnie' => $r['cnie']] + $data($r), $credential['password'], $credential['hash'], (bool) $r['active'], $author ?? throw new ImportConflictException);
                     if ($r['active']) {
+                        $enrolled[] = $created->id;
                         $passwords[] = [
                             'first_name' => $r['first_name'], 'last_name' => $r['last_name'], 'email' => $r['email'],
                             'class' => (string) $classes->get((int) $r['class_id'])?->name, 'password' => $credential['password'],
@@ -221,7 +229,13 @@ class LearnerImportRunner
                     throw new ImportConflictException;
                 }
                 $this->learners->importUpdate($learner, $user, $data($r), (bool) $r['active'], $author ?? throw new ImportConflictException);
+                if ($r['active']) {
+                    $enrolled[] = $learner->id;
+                }
             }
+
+            // RG-IMP-07 : une ligne retirée n'est jamais rétablie (décision 1).
+            $this->participation->enroll($eventId, $enrolled);
 
             // Finalisation dans la même transaction ; jamais sur un import déjà terminal.
             $done = new LearnerImport;

@@ -2,6 +2,7 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { useLogout, useMe } from '../auth/queries'
 import type { CurrentUser, FlashLocationState, RoleName } from '../auth/types'
+import { CompanyEventCard } from '../pages/CompanyHomePage'
 import { CloseIcon, HomeIcon, LogoutIcon, MenuIcon, UserIcon } from './icons'
 
 /** Permissions des liens de navigation (CDC 3.2). Le serveur reste seul juge des droits. */
@@ -11,6 +12,8 @@ const USERS_MANAGE = 'users.manage'
 const LEARNERS_VIEW = 'learners.view'
 const LEARNERS_IMPORT = 'learners.import'
 const COMPANIES_PERMISSIONS = ['companies.manage', 'companies.profiles.manage']
+const EVENTS_MANAGE = 'events.manage'
+const LOCATIONS_MANAGE = 'locations.manage'
 
 export const LOGOUT_FAILED_MESSAGE =
   "La déconnexion a échoué : votre session est peut-être encore ouverte. Vérifiez votre connexion et réessayez."
@@ -40,7 +43,9 @@ function navItems(user: CurrentUser): NavItem[] {
   }
 
   const items: NavItem[] = [{ to: user.home, label: 'Tableau de bord', end: true }]
+  if (can(EVENTS_MANAGE)) items.push({ to: '/evenements', label: 'Événement et programme' })
   if (COMPANIES_PERMISSIONS.some(can)) items.push({ to: '/entreprises', label: 'Entreprises participantes' })
+  if (can(LOCATIONS_MANAGE)) items.push({ to: '/emplacements', label: 'Emplacements des entreprises' })
   if (can(LEARNERS_VIEW)) items.push({ to: '/apprenants', label: 'Apprenants', end: true })
   if (can(LEARNERS_IMPORT)) items.push({ to: '/apprenants/import', label: 'Import des apprenants' })
   if (can(USERS_MANAGE)) items.push({ to: '/comptes', label: 'Comptes CME et Direction' })
@@ -235,6 +240,7 @@ export default function AppLayout() {
         <aside className="contents md:sticky md:top-0 md:flex md:h-screen md:w-72 md:shrink-0 md:flex-col md:border-r md:border-slate-200 md:bg-white md:p-5">
           <div className="hidden md:block">
             <Brand user={user} />
+            <CompanyEventCard />
           </div>
           <nav
             aria-label="Navigation principale"

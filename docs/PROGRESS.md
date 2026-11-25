@@ -423,3 +423,51 @@ Tests ajoutés : 1 backend (N3) et 4 frontend (N1 : réponses B puis A avec cibl
 Contrôles (23/11) : Pint et PHPStan sans erreur ; suite backend complète dans Docker : **443 tests réussis, 2281 assertions** (≈ 6 min, code de sortie 0), dont 26 pour l'import ; frontend lint, **92 tests** et build réussis. Essai fonctionnel de l'import jusqu'à la confirmation réalisé par le responsable technique (23/11).
 
 Contrôles (20/11) : Pint et PHPStan sans erreur ; suite backend complète dans Docker : **433 tests réussis, 2230 assertions** (≈ 5 min 30, code de sortie 0), puis deux corrections d'annotations de type demandées par PHPStan (sans effet sur le comportement) et `tests/Feature/Learners` relancé : **55 tests réussis** (dont 16 pour l'import) ; frontend lint, **85 tests** et build réussis.
+
+## 2026-11-23 — T-14 (JD-19) : événements, participants et emplacements
+
+Préparation : plan (`docs/tasks/PLAN-T-14.md`) revu par Codex (`docs/reviews/REVIEW-PLAN-T-14.md`, « Plan à revoir », 3 constats majeurs) ; version 1.3 contre-revue (`docs/reviews/REVIEW-PLAN-T-14-contre-revue.md`, « Plan validé après corrections mineures ») ; version 1.4 avec le résidu R1. Décisions du 23/11 dans `DECISIONS.md` (« Événements et participants (T-14) », « Année des événements et vue entreprise (T-14) »).
+
+Réalisé (non commité, branche `feature/T-14-evenements`) :
+- tables `events`, `event_companies`, `event_learners`, `event_locks` ; un seul événement courant (colonne générée et index unique) ; **un seul événement par année scolaire** (index unique, archivés compris) ;
+- événements : création, modification, nom terminé automatiquement par l'année scolaire (septembre à août), statut calculé à l'heure du Maroc, désignation avec rapport, retrait du statut, archivage, désarchivage, suppression ;
+- inscription automatique des apprenants actifs à la désignation, à la création, à l'import, à la réactivation et à la restauration ; un apprenant **retiré reste retiré** jusqu'à « Réinscrire » ;
+- entreprises : événement obligatoire à la création dans une seule transaction (logo nettoyé en cas d'échec), ajout en masse avec rapport, retrait, emplacements par l'administrateur et la CME ;
+- fiche de connexion avec événement et emplacement, y compris après réinitialisation ;
+- affichage : accueil entreprise (**événement courant uniquement**, sans sélecteur) et « Ma journée » (événement et entreprises présentes, sans contact ni identifiant) ;
+- écrans : « Événement et programme » (sans le programme), « Entreprises participantes », « Emplacements des entreprises », état et actions dans « Apprenants » ;
+- journal : catégorie « Événements et participants », une seule ligne pour une inscription en masse ;
+- aucune nouvelle dépendance ni permission.
+
+Limites et points à signaler :
+- `EventUsage` répond **0** jusqu'à T-30 : retraits, suppressions et changements de date ne sont réellement protégés par les passages qu'après T-30 ;
+- les tests de concurrence utilisent `pcntl` et `posix` : présents dans l'image Docker, **non déclarés dans la CI** ; à vérifier au premier passage de la CI ;
+- le bouton d'ajout s'appelle « Ajouter des entreprises existantes » (accord du responsable technique, 23/11), car il sert à toute entreprise existante ;
+- actions non rejouées par Claude dans le navigateur (seulement l'ouverture des pages) ; essais fonctionnels en cours par le responsable technique.
+
+Passages de relais :
+- **T-64 (JD-44)** : import des entreprises par fichier, à faire après T-14 ;
+- **T-30** : remplacer `NoEventUsage`. Dans une seule transaction : verrou partagé sur la ligne de l'événement, relecture ENSUITE de l'événement (non archivé) et des deux participations (entreprise inscrite ; apprenant non retiré, compte actif), puis création du passage ; tester « retrait contre création de passage » à deux connexions ;
+- **T-23, T-30, T-33 et exports** : tous les écrans et exports de l'entreprise se limitent à l'événement courant, côté serveur ; réutiliser `Learner::participatingIn` ;
+- **T-16** : écrire les éditions passées directement, avec un rapport ; deux événements sur une même année scolaire bloqueraient la reprise et devront être tranchés.
+
+Contrôles (23/11) : Pint et PHPStan sans erreur ; suite backend complète dans Docker : **515 tests réussis, 2672 assertions** (≈ 7 min 40, code de sortie 0), dont 39 dans `EventTest` et 10 de concurrence à deux connexions MySQL ; frontend lint, **110 tests** et build réussis. Mesure : désignation avec **2 000 apprenants actifs en ≈ 410 ms**, pic mémoire 16 Mio.
+
+Revue du code par Codex (`docs/reviews/REVIEW-T-14-evenements.md`, « À corriger avant fusion », 2 constats majeurs, 3 mineurs et 1 suggestion), tous corrigés (accord du 23/11) :
+- constat 1 (données d'un événement enregistrées dans un autre) : anciennes lignes gardées seulement à événement identique, état du panneau remis à zéro à tout changement d'événement, événement dans la clé du formulaire d'emplacement, réponse d'un formulaire fermé ignorée ;
+- constat 2 (archive supprimable) : suppression refusée sous verrou, bouton retiré ; il faut d'abord désarchiver ;
+- constat 3 (coordonnée isolée) : latitude et longitude contrôlées ensemble sur la valeur obtenue après la modification ;
+- constat 4 (journal) : état « avant » capturé avant le changement d'année ; ancien et nouveau nom complet enregistrés ;
+- constat 5 (succès tardif) : il ne ferme plus le panneau du nouvel événement ;
+- constat 6 (preuve des tests) : blocage réel de l'autre connexion constaté avant de libérer le verrou, attentes bornées, `posix` déclaré ; matrice des droits avec le statut exact de chaque route.
+Tests ajoutés : 2 méthodes backend et 4 frontend ; tests d'archivage, de concurrence et matrice renforcés.
+
+Contrôles après correction (23/11) : Pint et PHPStan sans erreur ; suite backend complète dans Docker : **517 tests réussis, 2696 assertions** (durée indiquée 751,68 s, code de sortie 0) ; frontend lint, **114 tests** et build réussis. Le passage a paru bien plus long en temps réel que la durée indiquée ; la cause n'est pas établie.
+
+Contre-revue du code par Codex (`docs/reviews/REVIEW-T-14-contre-revue.md`, 25/11, « À fusionner après corrections mineures ») : constats 1 à 5 corrigés, constat 6 partiel ; reliquat **R1** (le détecteur de blocage acceptait une requête lente ou une autre connexion). Corrigé (accord du 25/11) :
+- l'enfant transmet son numéro de connexion MySQL ; seule cette connexion est surveillée ;
+- preuve par InnoDB (`performance_schema.data_lock_waits`) : la connexion de l'enfant attend un verrou détenu par celle du parent ;
+- deux contrôles négatifs : requête lente sans verrou refusée ; autre connexion réellement bloquée non confondue avec l'enfant ;
+- droit de **lecture seule** sur `performance_schema.data_lock_waits` et `performance_schema.threads` accordé à l'utilisateur MySQL local `jobdating` (accord du 25/11) : script `docker/mysql/init/02-lecture-des-verrous.sql` pour un nouveau volume, appliqué une fois en root sur le volume existant. La CI se connecte en root et n'en a pas besoin.
+
+Contrôles (25/11) : Pint et PHPStan sans erreur ; tests de concurrence : **12 réussis** ; suite backend complète dans Docker : **519 tests réussis, 2708 assertions** (durée indiquée 630,70 s, code de sortie 0) ; frontend inchangé depuis le 23/11 (lint, 114 tests et build réussis).

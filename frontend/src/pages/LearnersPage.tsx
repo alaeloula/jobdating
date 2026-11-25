@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useMe } from '../auth/queries'
+import { reinstateLearner, removeLearner } from '../events/api'
 import { ApiError } from '../lib/api'
 import { useReferentialOptions, type ReferentialOption } from '../referentials/api'
 import CompetencesPanel from '../learners/CompetencesPanel'
@@ -23,6 +24,7 @@ const button = 'min-h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm
 const LEARNERS_UPDATE = 'learners.update'
 const VIEW_CNIE = 'learners.view_cnie'
 const COMPETENCES_MANAGE = 'learners.competences.manage'
+const PARTICIPANTS_MANAGE = 'participants.manage'
 
 type Panel = { kind: 'new' } | { kind: 'edit'; learner: Learner } | { kind: 'competences'; learner: Learner } | null
 
@@ -35,6 +37,7 @@ interface Bulk {
 }
 
 const STATUS_LABEL = { actif: 'Actif', desactive: 'Désactivé', supprime: 'Supprimé' } as const
+const EVENT_STATUS_LABEL = { inscrit: 'Inscrit', retire: 'Retiré', non_inscrit: 'Non inscrit' } as const
 
 /**
  * Apprenants (ADM-03, T-12, maquette admin-06). Administrateur : gestion complète. CME : lecture et
@@ -47,6 +50,8 @@ export default function LearnersPage() {
   const canCompetences = me?.permissions.includes(COMPETENCES_MANAGE) ?? false
   const canSelect = canManage || canCompetences
   const canSeeCnie = me?.permissions.includes(VIEW_CNIE) ?? false
+  const canParticipants = me?.permissions.includes(PARTICIPANTS_MANAGE) ?? false
+  const [eventBusy, setEventBusy] = useState<number | null>(null)
 
   const [filters, setFilters] = useState<LearnerFilters>(EMPTY_FILTERS)
   const [page, setPage] = useState(1)
@@ -76,6 +81,7 @@ export default function LearnersPage() {
 
   const rows = list.data?.data ?? []
   const meta = list.data?.meta
+  const currentEvent = list.data?.current_event ?? null
   const selection: Selection | null = wholeFilter ?? (checked.length > 0 ? { mode: 'ids', ids: checked } : null)
   const selectedCount = wholeFilter ? wholeFilter.total : checked.length
 
@@ -130,6 +136,21 @@ export default function LearnersPage() {
 
   const rowAction = (learner: Learner, name: 'deactivate' | 'reactivate' | 'restore' | 'delete', message: string) =>
     action.mutate({ id: learner.id, name }, { onSuccess: () => say(message), onError: fail })
+
+  /** Retrait ou réinscription dans l'événement courant (décision 1 du 23/11). */
+  const eventAction = async (learner: Learner, eventId: number, kind: 'remove' | 'reinstate') => {
+    if (eventBusy !== null) return
+    setEventBusy(learner.id)
+    try {
+      await (kind === 'remove' ? removeLearner(eventId, learner.id) : reinstateLearner(eventId, learner.id))
+      await refresh()
+      say(`${learner.first_name} ${learner.last_name} est ${kind === 'remove' ? 'retiré(e) de' : 'réinscrit(e) à'} l’événement.`)
+    } catch (e) {
+      fail(e)
+    } finally {
+      setEventBusy(null)
+    }
+  }
 
   const openBulk = async (next: BulkAction, competenceId?: number) => {
     if (!selection) return
@@ -434,7 +455,10 @@ export default function LearnersPage() {
                     <td className="px-4 py-3">{l.filiere.label}</td>
                     <td className="px-4 py-3">{l.school_class.label}</td>
                     <td className="px-4 py-3">{l.promotion.label}</td>
-                    <td className="px-4 py-3">{STATUS_LABEL[l.status]}</td>
+                    <td className="px-4 py-3">
+                      {STATUS_LABEL[l.status]}
+                      {l.event_status && <p className="text-xs text-slate-600">{EVENT_STATUS_LABEL[l.event_status]}</p>}
+                    </td>
                     {(canManage || canCompetences) && (
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap justify-end gap-2">
@@ -465,6 +489,16 @@ export default function LearnersPage() {
                           {canManage && l.status === 'supprime' && (
                             <button type="button" className={button} onClick={() => rowAction(l, 'restore', `${l.first_name} ${l.last_name} est restauré(e).`)}>
                               Restaurer
+                            </button>
+                          )}
+                          {canParticipants && currentEvent && l.status !== 'supprime' && l.event_status === 'inscrit' && (
+                            <button type="button" className={button} disabled={eventBusy !== null} onClick={() => void eventAction(l, currentEvent.id, 'remove')}>
+                              Retirer de l’événement
+                            </button>
+                          )}
+                          {canParticipants && currentEvent && l.status !== 'supprime' && l.event_status === 'retire' && (
+                            <button type="button" className={button} disabled={eventBusy !== null} onClick={() => void eventAction(l, currentEvent.id, 'reinstate')}>
+                              Réinscrire
                             </button>
                           )}
                           {canCompetences && l.status !== 'supprime' && (

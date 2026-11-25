@@ -27,6 +27,8 @@ export interface Learner {
   cnie?: string
   phone?: string | null
   cme_learner_id?: string | null
+  /** État dans l'événement courant (T-14), administrateur seulement, dans la liste. */
+  event_status?: 'inscrit' | 'retire' | 'non_inscrit'
 }
 
 export interface LearnerFilters {
@@ -52,6 +54,7 @@ export const EMPTY_FILTERS: LearnerFilters = {
 interface Paginated {
   data: Learner[]
   meta: { current_page: number; last_page: number; total: number }
+  current_event?: { id: number; name: string } | null
 }
 
 /** Filtres envoyés au serveur : valeurs vides retirées, identifiants en nombres. */

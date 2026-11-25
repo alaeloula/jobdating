@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { formatDate, placementLabel } from '../events/api'
 import { ApiError } from '../lib/api'
 import { confirmPrinted, type Credentials } from './api'
 
@@ -45,6 +46,18 @@ export default function CredentialsSheet({
       <div className="fiche-connexion rounded-2xl border-2 border-slate-900 bg-white p-5">
         <p className="text-lg font-bold text-indigo-800">JobDating YouCode</p>
         <p className="mt-2 text-2xl font-bold">{companyName}</p>
+        {credentials.event && (
+          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm" data-testid="sheet-event">
+            <dt className="text-slate-600">Événement</dt>
+            <dd className="font-semibold">{credentials.event.name}</dd>
+            <dt className="text-slate-600">Date</dt>
+            <dd>{formatDate(credentials.event.date)}</dd>
+            <dt className="text-slate-600">Lieu</dt>
+            <dd>{credentials.event.location}</dd>
+            <dt className="text-slate-600">Emplacement</dt>
+            <dd>{placementLabel(credentials.event.floor, credentials.event.table_label) ?? 'À confirmer sur place'}</dd>
+          </dl>
+        )}
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-lg bg-slate-100 p-4">
           <dt className="text-slate-600">Adresse</dt>
           <dd className="font-mono break-all">{credentials.url}</dd>

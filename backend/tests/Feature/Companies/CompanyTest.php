@@ -6,6 +6,7 @@ use App\Enums\AuditAction;
 use App\Enums\Role;
 use App\Models\AuditLog;
 use App\Models\Company;
+use App\Models\Event;
 use App\Models\Referentials\Competence;
 use App\Models\Referentials\Filiere;
 use App\Models\Referentials\Sector;
@@ -34,6 +35,9 @@ class CompanyTest extends TestCase
 
     private User $admin;
 
+    /** Événement obligatoire à la création d'une entreprise (T-14). */
+    private int $eventId;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -41,6 +45,8 @@ class CompanyTest extends TestCase
         Storage::fake('local');
         Notification::fake();
         $this->admin = User::factory()->withRole(Role::Administrateur)->create();
+        $date = now(Event::TIMEZONE)->addMonth()->toDateString();
+        $this->eventId = Event::query()->forceCreate(['name' => 'JobDating', 'school_year' => Event::schoolYearFor($date), 'date' => $date, 'location' => 'Campus Fictif'])->id;
         $this->withHeader('Origin', 'http://localhost');
     }
 
@@ -67,7 +73,7 @@ class CompanyTest extends TestCase
     private function create(array $extra = []): array
     {
         $response = $this->actingAs($this->admin, 'web')
-            ->post('/api/v1/companies', array_merge(['name' => 'Société Générale', 'username' => 'societe-generale'], $extra), ['Accept' => 'application/json'])
+            ->post('/api/v1/companies', array_merge(['name' => 'Société Générale', 'username' => 'societe-generale', 'event_id' => $this->eventId], $extra), ['Accept' => 'application/json'])
             ->assertCreated();
 
         return $response->json();
@@ -158,7 +164,7 @@ class CompanyTest extends TestCase
     public function test_la_reponse_de_creation_n_est_jamais_mise_en_cache(): void
     {
         $this->actingAs($this->admin, 'web')
-            ->post('/api/v1/companies', ['name' => 'Acme', 'username' => 'acme'], ['Accept' => 'application/json'])
+            ->post('/api/v1/companies', ['name' => 'Acme', 'username' => 'acme', 'event_id' => $this->eventId], ['Accept' => 'application/json'])
             ->assertCreated()->assertHeader('Cache-Control', 'no-store, private');
     }
 
@@ -166,9 +172,9 @@ class CompanyTest extends TestCase
     {
         $this->actingAs($this->admin, 'web');
         $first = $this->getJson('/api/v1/companies/username-suggestion?name=Acme Maroc')->json('data.username');
-        $this->postJson('/api/v1/companies', ['name' => 'Acme Maroc', 'username' => $first])->assertCreated();
+        $this->postJson('/api/v1/companies', ['name' => 'Acme Maroc', 'username' => $first, 'event_id' => $this->eventId])->assertCreated();
         $second = $this->getJson('/api/v1/companies/username-suggestion?name=Acme Maroc')->json('data.username');
-        $this->postJson('/api/v1/companies', ['name' => 'Acme Maroc', 'username' => $second])->assertCreated();
+        $this->postJson('/api/v1/companies', ['name' => 'Acme Maroc', 'username' => $second, 'event_id' => $this->eventId])->assertCreated();
 
         $this->assertSame(['acme-maroc', 'acme-maroc-2'], [$first, $second]);
     }
@@ -232,7 +238,7 @@ class CompanyTest extends TestCase
     public function test_site_web_et_logo_invalides_refuses(): void
     {
         $this->actingAs($this->admin, 'web');
-        $post = fn (array $data) => $this->post('/api/v1/companies', ['name' => 'X', 'username' => 'xxx'] + $data, ['Accept' => 'application/json']);
+        $post = fn (array $data) => $this->post('/api/v1/companies', ['name' => 'X', 'username' => 'xxx', 'event_id' => $this->eventId] + $data, ['Accept' => 'application/json']);
 
         $post(['website' => 'pas une adresse'])->assertStatus(422)->assertJsonValidationErrors('website');
         $post(['website' => 'ftp://exemple.test'])->assertStatus(422)->assertJsonValidationErrors('website');
@@ -275,7 +281,7 @@ class CompanyTest extends TestCase
         });
 
         $this->actingAs($this->admin, 'web')
-            ->post('/api/v1/companies', ['name' => 'Acme', 'username' => 'acme', 'logo' => $this->logo()], ['Accept' => 'application/json'])
+            ->post('/api/v1/companies', ['name' => 'Acme', 'username' => 'acme', 'event_id' => $this->eventId, 'logo' => $this->logo()], ['Accept' => 'application/json'])
             ->assertStatus(500);
 
         $this->assertSame([], Storage::disk('local')->allFiles());
@@ -433,7 +439,7 @@ class CompanyTest extends TestCase
 
         $this->patchJson("/api/v1/companies/{$id}", ['sector_id' => $sector->id, 'description' => 'Nouvelle'])->assertOk();
         $this->patchJson("/api/v1/companies/{$id}", ['sector_id' => $other->id])->assertStatus(422)->assertJsonValidationErrors('sector_id');
-        $this->post('/api/v1/companies', ['name' => 'B', 'username' => 'bbb', 'sector_id' => $other->id], ['Accept' => 'application/json'])
+        $this->post('/api/v1/companies', ['name' => 'B', 'username' => 'bbb', 'event_id' => $this->eventId, 'sector_id' => $other->id], ['Accept' => 'application/json'])
             ->assertStatus(422)->assertJsonValidationErrors('sector_id');
 
         $this->assertSame($sector->id, Company::query()->findOrFail($id)->sector_id);
