@@ -516,3 +516,5 @@ Contrôles (26/11) : frontend lint, **121 tests** et build réussis ; backend no
 
 Vérification Codex de N1 et N2 (`docs/reviews/REVIEW-T-64-verification.md`, « À fusionner après corrections mineures ») : N1 et N2 corrigés ; nouveau constat V1 (mineur) corrigé (accord du 26/11) : après une suppression réussie, l'import affiché est marqué tout de suite « mots de passe supprimés », sans attendre la relecture ; si celle-ci échoue, les actions des fiches ne restent plus proposées. Test ajouté (suppression 204 puis relecture 503), vérifié rouge sans le correctif.
 Contrôles (26/11) : frontend lint, **122 tests** et build réussis ; backend non modifié.
+
+CI de la PR #16 (26/11) : `composer audit` en échec à cause de 5 failles Symfony publiées le 25/11 (http-kernel, mailer, routing), sans lien avec T-64. Mise à jour corrective de 8 paquets déjà présents (`composer update symfony/http-kernel symfony/mailer symfony/routing -W`, toutes en 7.4.24 ou correctif équivalent, aucun paquet ajouté) ; `composer audit` sans faille ; suite backend complète lancée seule : **555 tests réussis, 2922 assertions**.
