@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { useMe } from '../auth/queries'
 import ParticipantsPanel from '../events/ParticipantsPanel'
 import { useRefreshEvents } from '../events/api'
@@ -127,16 +128,21 @@ export default function CompaniesPage() {
           <p className="text-slate-600">Connexion par nom d’utilisateur ; aucun e-mail envoyé.</p>
         </div>
         {canManage && (
-          <button
-            type="button"
-            onClick={() => {
-              setSheet(null)
-              setPanel({ kind: 'new' })
-            }}
-            className="rounded-xl bg-indigo-600 px-4 py-2 font-bold text-white hover:bg-indigo-700"
-          >
-            Nouvelle entreprise
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/entreprises/import" className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-bold text-slate-800 hover:bg-slate-50">
+              Importer (fichier)
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setSheet(null)
+                setPanel({ kind: 'new' })
+              }}
+              className="rounded-xl bg-indigo-600 px-4 py-2 font-bold text-white hover:bg-indigo-700"
+            >
+              Nouvelle entreprise
+            </button>
+          </div>
         )}
       </div>
 

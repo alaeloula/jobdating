@@ -23,7 +23,11 @@ final class UsernameSuggester
 
     private const FALLBACK = 'entreprise';
 
-    public static function suggest(string $companyName): string
+    /**
+     * @param  list<string>  $reserved  noms déjà proposés dans le même lot (import T-64), évités comme
+     *                                  des comptes existants, après troncature
+     */
+    public static function suggest(string $companyName, array $reserved = []): string
     {
         $base = self::base($companyName);
 
@@ -31,7 +35,7 @@ final class UsernameSuggester
             $suffix = $n === 1 ? '' : '-'.$n;
             $candidate = self::fit($base, strlen($suffix)).$suffix;
 
-            if (! self::taken($candidate)) {
+            if (! in_array($candidate, $reserved, true) && ! self::taken($candidate)) {
                 return $candidate;
             }
         }

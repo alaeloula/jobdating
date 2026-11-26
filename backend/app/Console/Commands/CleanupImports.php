@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\CompanyImport;
 use App\Models\LearnerImport;
+use App\Services\Imports\CompanyImportRunner;
 use App\Services\Imports\LearnerImportRunner;
 use App\Support\PrivateTemp;
 use Illuminate\Console\Command;
@@ -20,7 +22,7 @@ class CleanupImports extends Command
 
     public const STALE_MINUTES = 20;
 
-    public function handle(LearnerImportRunner $runner): int
+    public function handle(LearnerImportRunner $runner, CompanyImportRunner $companies): int
     {
         $limit = now()->subMinutes(self::STALE_MINUTES);
         // Même condition pour la sélection ET pour la mise à jour atomique : un import pris en charge
@@ -34,9 +36,19 @@ class CleanupImports extends Command
         foreach ($ids as $id) {
             $runner->markFailed((int) $id, LearnerImportRunner::ABANDONED_ERROR, $stale);
         }
+        // Imports d'entreprises (T-64) : même règle, même condition atomique.
+        $staleCompanies = function ($q) use ($limit): void {
+            $q->where(fn ($p) => $p->where('status', CompanyImport::PENDING)->where('created_at', '<', $limit))
+                ->orWhere(fn ($p) => $p->where('status', CompanyImport::PROCESSING)->where('started_at', '<', $limit));
+        };
+        $companyIds = CompanyImport::query()->where($staleCompanies)->pluck('id');
+        foreach ($companyIds as $id) {
+            $companies->markFailed((int) $id, CompanyImportRunner::ABANDONED_ERROR, $staleCompanies);
+        }
         $folders = PrivateTemp::sweep();
 
-        $this->info("Imports abandonnés : {$ids->count()} ; dossiers temporaires supprimés : {$folders}.");
+        $count = $ids->count() + $companyIds->count();
+        $this->info("Imports abandonnés : {$count} ; dossiers temporaires supprimés : {$folders}.");
 
         return self::SUCCESS;
     }

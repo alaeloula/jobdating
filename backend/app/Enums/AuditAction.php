@@ -46,6 +46,13 @@ enum AuditAction: string
     case LearnerImportPasswordsDownloaded = 'learner_import.passwords_downloaded';
     case LearnerImportPasswordsDeleted = 'learner_import.passwords_deleted';
 
+    case CompanyImportConfirmed = 'company_import.confirmed';
+    case CompanyImportCompleted = 'company_import.completed';
+    case CompanyImportFailed = 'company_import.failed';
+    case CompanyImportCredentialsViewed = 'company_import.credentials_viewed';
+    case CompanyImportCredentialsPrinted = 'company_import.credentials_printed';
+    case CompanyImportCredentialsDeleted = 'company_import.credentials_deleted';
+
     case EventCreated = 'event.created';
     case EventUpdated = 'event.updated';
     case EventCurrentSet = 'event.current_set';
@@ -79,7 +86,10 @@ enum AuditAction: string
             self::LearnerBulkDeactivated, self::LearnerBulkCompetenceAdded => AuditCategory::Apprenants,
             self::LearnerCnieViewed => AuditCategory::Cnie,
             self::LearnerImportConfirmed, self::LearnerImportCompleted, self::LearnerImportFailed,
-            self::LearnerImportPasswordsDownloaded, self::LearnerImportPasswordsDeleted => AuditCategory::ImportsExports,
+            self::LearnerImportPasswordsDownloaded, self::LearnerImportPasswordsDeleted,
+            self::CompanyImportConfirmed, self::CompanyImportCompleted, self::CompanyImportFailed,
+            self::CompanyImportCredentialsViewed, self::CompanyImportCredentialsPrinted,
+            self::CompanyImportCredentialsDeleted => AuditCategory::ImportsExports,
             self::EventCreated, self::EventUpdated, self::EventCurrentSet, self::EventCurrentUnset,
             self::EventArchived, self::EventUnarchived, self::EventDeleted, self::EventCompanyAdded,
             self::EventCompanyRemoved, self::EventCompanyLocationUpdated, self::EventLearnerRemoved,
@@ -124,6 +134,12 @@ enum AuditAction: string
             self::LearnerImportFailed => 'Import d’apprenants en échec',
             self::LearnerImportPasswordsDownloaded => 'Fichier des mots de passe téléchargé',
             self::LearnerImportPasswordsDeleted => 'Fichier des mots de passe supprimé',
+            self::CompanyImportConfirmed => 'Import d’entreprises confirmé',
+            self::CompanyImportCompleted => 'Import d’entreprises terminé',
+            self::CompanyImportFailed => 'Import d’entreprises en échec',
+            self::CompanyImportCredentialsViewed => 'Fiches de connexion de l’import affichées',
+            self::CompanyImportCredentialsPrinted => 'Fiches de connexion de l’import imprimées',
+            self::CompanyImportCredentialsDeleted => 'Mots de passe de l’import supprimés',
             self::EventCreated => 'Événement créé',
             self::EventUpdated => 'Événement modifié',
             self::EventCurrentSet => 'Événement désigné comme courant',
