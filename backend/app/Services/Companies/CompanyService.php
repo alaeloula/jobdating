@@ -6,6 +6,7 @@ use App\Enums\AuditAction;
 use App\Enums\PasswordTokenType;
 use App\Enums\Role;
 use App\Models\Company;
+use App\Models\Event;
 use App\Models\Referentials\Competence;
 use App\Models\Referentials\Filiere;
 use App\Models\Referentials\ReferentialModel;
@@ -17,6 +18,7 @@ use App\Services\Auth\SessionRevoker;
 use App\Services\Events\EventParticipationService;
 use App\Services\Passwords\PasswordGenerator;
 use App\Services\Passwords\PasswordTokenService;
+use App\Support\CompanyNameKey;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -70,6 +72,8 @@ class CompanyService
             // (revue Codex T-11, constat 1). Une erreur interne est traitée par le catch ci-dessous.
             $this->discardIfEnclosingRollsBack($discard);
             $company = DB::transaction(function () use ($data, $logoPath, $password, $admin, $placement): Company {
+                // Ordre (plan T-64 v1.3, § 4) : noms → événement → compte → entreprise.
+                CompanyNameLock::acquire();
                 $event = $placement !== null ? $this->participation->lockEligibleEvent($placement['event_id']) : null;
                 $this->assertActive(Sector::class, $data['sector_id'] ?? null, 'sector_id', 'Ce secteur n’est plus proposé.');
 
@@ -89,6 +93,7 @@ class CompanyService
                 $company->fill(array_intersect_key($data, array_flip(Company::EDITABLE)));
                 $company->forceFill([
                     'user_id' => $user->getKey(),
+                    'name_key' => CompanyNameKey::of((string) $company->name),
                     'logo_path' => $logoPath,
                     'credentials_version' => 1,
                     'credentials_printed_at' => null,
@@ -115,11 +120,50 @@ class CompanyService
     }
 
     /**
+     * Création par l'import (plan T-64 v1.3, § 6) : l'APPELANT a ouvert la transaction, pris le verrou
+     * des noms puis celui de l'événement, et revalidé la ligne. `$hash` est enregistré tel quel (aucun
+     * hachage sous les verrous) ; aucun logo, aucun e-mail (décision du 14/11).
+     */
+    public function importCreate(Event $event, string $name, string $username, string $hash, User $admin): Company
+    {
+        $user = new User;
+        $user->forceFill([
+            'first_name' => mb_substr($name, 0, 100),
+            'last_name' => '',
+            'username' => $username,
+            'email' => null,
+            'password' => $hash,
+            'activated_at' => now(),
+        ])->save();
+        $user->setRole(Role::Entreprise);
+
+        $company = new Company;
+        $company->forceFill([
+            'name' => $name,
+            'name_key' => CompanyNameKey::of($name),
+            'user_id' => $user->getKey(),
+            'logo_path' => null,
+            'credentials_version' => 1,
+            'credentials_printed_at' => null,
+        ])->save();
+
+        $this->audit->record(AuditAction::CompanyCreated, $company, new: $this->snapshot($company) + ['nom_utilisateur' => $username, 'source' => 'import'], actor: $admin);
+        $this->participation->attachNewCompany($event, $company, null, null, $admin);
+
+        return $company;
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     public function update(Company $company, array $data, User $admin): Company
     {
         return DB::transaction(function () use ($company, $data, $admin): Company {
+            // Renommage : verrou des noms D'ABORD, puis l'ordre existant entreprise → compte (plan T-64
+            // v1.3, § 4 ; contre-revue, constat 2).
+            if (array_key_exists('name', $data)) {
+                CompanyNameLock::acquire();
+            }
             $locked = $this->lock($company);
             $fields = array_intersect_key($data, array_flip(Company::EDITABLE));
 
@@ -130,7 +174,10 @@ class CompanyService
 
             $before = $this->snapshot($locked);
             $locked->fill($fields);
-            $changed = array_keys($locked->getDirty());
+            if ($locked->isDirty('name')) {
+                $locked->forceFill(['name_key' => CompanyNameKey::of($locked->name)]);
+            }
+            $changed = array_values(array_diff(array_keys($locked->getDirty()), ['name_key']));
             $locked->save();
 
             if (in_array('name', $changed, true)) {

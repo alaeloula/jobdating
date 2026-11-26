@@ -6,8 +6,20 @@
     visibility: hidden;
   }
   .fiche-connexion,
-  .fiche-connexion * {
+  .fiche-connexion *,
+  .fiches-lot,
+  .fiches-lot * {
     visibility: visible;
+  }
+  /* Import des entreprises (T-64) : une fiche par page. */
+  .fiches-lot {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+  }
+  .fiche-lot {
+    break-after: page;
+    border: 2px solid #000;
   }
   .fiche-connexion {
     position: absolute;

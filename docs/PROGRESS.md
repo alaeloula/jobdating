@@ -471,3 +471,48 @@ Contre-revue du code par Codex (`docs/reviews/REVIEW-T-14-contre-revue.md`, 25/1
 - droit de **lecture seule** sur `performance_schema.data_lock_waits` et `performance_schema.threads` accordé à l'utilisateur MySQL local `jobdating` (accord du 25/11) : script `docker/mysql/init/02-lecture-des-verrous.sql` pour un nouveau volume, appliqué une fois en root sur le volume existant. La CI se connecte en root et n'en a pas besoin.
 
 Contrôles (25/11) : Pint et PHPStan sans erreur ; tests de concurrence : **12 réussis** ; suite backend complète dans Docker : **519 tests réussis, 2708 assertions** (durée indiquée 630,70 s, code de sortie 0) ; frontend inchangé depuis le 23/11 (lint, 114 tests et build réussis).
+
+## 2026-11-25 — T-16 abandonnée ; T-64 (JD-44) : import des entreprises par fichier
+
+**T-16 abandonnée** (décision du 25/11) : les entreprises de l'ancienne application ne sont pas reprises ; JD-21 fermée avec un commentaire ; T-63 (passages historiques) reste à trancher.
+
+Préparation de T-64 : plan (`docs/tasks/PLAN-T-64.md`) revu par Codex (`REVIEW-PLAN-T-64.md`, « Plan à revoir ») puis contre-revu (`REVIEW-PLAN-T-64-contre-revue.md`, « Plan à revoir » : longueur de la clé de nom, ordre des verrous, variantes XML) ; version 1.3 avec ces corrections, développement autorisé par le responsable technique sans nouvelle contre-revue. Décisions du 25/11 dans `DECISIONS.md` (« Import des entreprises (T-64) », « Import des entreprises : fiches après l'import (T-64) »).
+
+Réalisé (non commité, branche `feature/T-64-import-entreprises`) :
+- **lecteur sélectif dédié** (`CompanyWorkbookReader`, sans OpenSpout) : ne décode que les noms des feuilles, la ligne 1 de « Entreprises Invitées » et les colonnes « Entreprises » et « Confirmation par mail » ; chaînes partagées décodées à la demande (en-têtes d'abord), texte riche et chaînes en ligne ; formules et valeurs non texte refusées ; relations externes et chemins hors de `xl/` refusés ; limites de taille ;
+- **clé de nom** `companies.name_key` = SHA-256 du nom simplifié (lettres et chiffres), indexée non unique, remplie pour les entreprises existantes, mise à jour à la création et au renommage ;
+- **verrou commun des noms** (`company_name_locks`) pris en premier par l'import, la création et le renommage ; renommage : noms → entreprise → compte ;
+- aperçu (à créer, déjà existantes, doublons, rejetées, non confirmées ; noms d'utilisateur réservés dans le lot), confirmation idempotente, traitement en file (`ProcessCompanyImport`, même worker que T-13), comptes et participations dans une seule transaction, nettoyage des imports abandonnés ;
+- **fiches** : identifiants chiffrés avec le hachage d'origine ; fiche exclue si mot de passe changé ou réinitialisé, ou compte désactivé ; entreprise retirée ou événement supprimé signalés ; emplacement actuel ; « J'ai imprimé les fiches » sous verrous entreprise → compte ; suppression des mots de passe ;
+- écran « Import des entreprises » (`/entreprises/import`) et bouton « Importer (fichier) » ; impression d'une fiche par page ;
+- tests : `CompanyImportTest` (24, classeurs fictifs construits par `tests/Support/FakeWorkbook.php`, sentinelles jamais décodées), `CompanyImportConcurrencyTest` (5 à deux connexions MySQL avec preuve d'attente) ; outils de concurrence de T-14 regroupés dans le trait `tests/Concerns/ForksDatabaseConnections.php` ; 4 tests frontend ;
+- fichier de test **fictif** : `C:\Users\Youcode\Desktop\jobdating\fichiers-de-test\import-entreprises-fictif.xlsx`.
+
+Limites et points à signaler :
+- **mesure** (1 000 entreprises fictives, bcrypt coût 12) : aperçu 0,7 s ; traitement ≈ 278 s, sous le délai de 600 s ; **verrou des noms tenu ≈ 22 s** (une création ou un renommage à la main attend pendant ce temps) ; pic mémoire 22 Mio ;
+- la création à la main n'interdit pas les homonymes ; seul l'import les signale ;
+- un rehachage automatique du mot de passe à la connexion (non utilisé aujourd'hui) rendrait les fiches de l'import caduques ;
+- les classeurs de test fictifs sont construits pièce par pièce ; le classeur réel n'a jamais été utilisé dans les tests.
+
+Contrôles (25/11) : Pint et PHPStan sans erreur ; tests de l'import 24 réussis ; tests de concurrence (T-14 et T-64) 17 réussis ; suite backend complète : 547 réussis et 1 échec (`validite des fiches`), dû au classeur de test réécrit entre l'aperçu et la confirmation (horodatage du zip) ; corrigé en construisant le classeur une seule fois, puis `CompanyImportTest` 24 réussis ; frontend lint, **118 tests** et build réussis.
+
+Revue du code T-64 par Codex (`docs/reviews/REVIEW-T-64-import-entreprises.md`, « À corriger avant fusion », 2 constats majeurs, 2 mineurs, 1 suggestion), tous corrigés (accord du 25/11) :
+- constat 1 (mots de passe réaffichés par une réponse tardive) : chaque affichage des fiches a son numéro, invalidé au masquage, à la suppression et au changement d'import ; bouton bloqué pendant le chargement ; fiches affichées seulement si le rapport annonce des identifiants ;
+- constat 2 (« Oui ? » accepté) : confirmation comparée sans casse ni espaces seulement (`CompanyImportPlanner::confirmed`), la ponctuation n'est plus retirée ;
+- constat 3 (historique « créées » pour un échec) : « à créer », « prévues, aucune créée » ou « créées » selon l'état ;
+- constat 4 (422 au lieu de 409) : même clé avec un autre aperçu → 409 `confirmation_key_reused` ;
+- constat 5 (ordre des verrous non prouvé) : l'autre connexion est libérée quand le renommage tient son premier verrou ; elle échoue si une de ses transactions est annulée puis rejouée ; **vérifié en inversant temporairement l'ordre dans `CompanyService::update`** : les deux tests échouent, puis code d'origine rétabli.
+Tests renforcés : contenu déchiffré du `payload` et des identifiants, comptes et journal après un échec, 7 cas de confirmation, 2 scénarios frontend (masquage et suppression avec réponse tardive) et l'historique.
+
+Incident de mesure : deux suites de tests lancées en même temps sur `jobdating_test` (Codex et Claude) se sont détruit mutuellement leurs tables (28 échecs, non liés au code) ; une suite complète lancée seule ensuite : 548 réussis. **Ne jamais lancer deux suites backend en parallèle.**
+
+Contrôles après correction (26/11, suite lancée seule) : Pint et PHPStan sans erreur ; suite backend complète dans Docker : **555 tests réussis, 2922 assertions** (≈ 11 min 40, code de sortie 0) ; frontend lint, **120 tests** et build réussis.
+
+Contre-revue du code T-64 par Codex (`docs/reviews/REVIEW-T-64-contre-revue.md`, « À corriger avant fusion ») : constats 2 à 5 validés, constat 1 partiel ; deux nouveaux constats corrigés (accord du 26/11) dans `CompanyImportPage.tsx` :
+- N1 (majeur, mots de passe réaffichés si le même import est rouvert pendant la suppression) : la suppression en cours est suivie par import et non par vue ; tant qu'elle dure, les fiches de cet import ne peuvent pas être chargées et toute réponse de fiches est ignorée ; à la fin, les fiches sont effacées et l'import affiché est relu, même si la vue a changé ;
+- N2 (mineur, double clic sur « Supprimer les mots de passe ») : second déclenchement ignoré, bouton désactivé (« Suppression des mots de passe… »).
+Test frontend ajouté (double clic, réouverture pendant la suppression) ; vérifié rouge sans le correctif, puis correctif rétabli.
+Contrôles (26/11) : frontend lint, **121 tests** et build réussis ; backend non modifié depuis la suite complète (555 tests).
+
+Vérification Codex de N1 et N2 (`docs/reviews/REVIEW-T-64-verification.md`, « À fusionner après corrections mineures ») : N1 et N2 corrigés ; nouveau constat V1 (mineur) corrigé (accord du 26/11) : après une suppression réussie, l'import affiché est marqué tout de suite « mots de passe supprimés », sans attendre la relecture ; si celle-ci échoue, les actions des fiches ne restent plus proposées. Test ajouté (suppression 204 puis relecture 503), vérifié rouge sans le correctif.
+Contrôles (26/11) : frontend lint, **122 tests** et build réussis ; backend non modifié.

@@ -32,7 +32,7 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 | T-14 (JD-19) | Événement courant, inscription automatique des participants, emplacements | ADM-05, ADM-07 | J |
 | T-64 (JD-44) | Import des **entreprises** par fichier : modèle, aperçu, doublons signalés, comptes affectés à l'événement choisi, fiches imprimables en une fois, sans e-mail (à faire après T-14) | ADM-04, RG-ENTR-03 à 05, DECISIONS 14/11 | J |
 | T-15 (JD-20) | Programme de l'événement | ADM-08 | J |
-| T-16 (JD-21) | Reprise des **entreprises** de l'ancienne application | CDC 8.8, REP-04 | J |
+| ~~T-16 (JD-21)~~ | ~~Reprise des **entreprises** de l'ancienne application~~ **Abandonnée** (DECISIONS 25/11) | CDC 8.8, REP-04 | — |
 
 ## Semaine 3 – CV et profils (US-02, US-03, US-04)
 
@@ -81,5 +81,5 @@ Ordre de réalisation revu le 12/11/2026 : les rôles, la connexion et l'audit p
 | T-60 (JD-40) | Service de statistiques unique et filtres | STAT-01 à STAT-04, RG-STAT, RG-FIL | A |
 | T-61 (JD-41) | Exports CSV et Excel en flux (modèle PC-43) + journal des exports | STAT-05, ENT-09, TRA-02 | A |
 | T-62 (JD-42) | Espace Direction en lecture seule | CDC 3.1 | A |
-| T-63 (JD-43) | Reprise des **passages historiques** | CDC 8.8, REP-01 à 03 | A |
+| T-63 (JD-43) | Reprise des **passages historiques** (non tranchée : sans T-16, elle devra reprendre elle-même les entreprises, DECISIONS 25/11) | CDC 8.8, REP-01 à 03 | A |
 | T-44 (Jira à créer) | Suivi des passages (CME) : liste de tous les passages, statut de suivi, détail, historique, **commentaires de l'équipe CME** (DECISIONS 20/11), rappels J+7, J+30, J+90, export. Remplace l'écran « Passages des entreprises » | DECISIONS 16/11 (V2), 20/11 | A |

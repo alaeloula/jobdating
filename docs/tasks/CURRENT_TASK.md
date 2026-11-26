@@ -1,19 +1,18 @@
-# Tâche courante – T-14 (JD-19) : événements, participants et emplacements
+# Tâche courante – T-64 (JD-44) : import des entreprises par fichier
 
-Branche à créer avant le code : `feature/T-14-evenements` (base `develop`, `1b05242`).
+Branche à créer avant le code : `feature/T-64-import-entreprises` (base `develop`, `c3f0365`).
 
-Plan : `docs/tasks/PLAN-T-14.md` (version 1.4, validée par Codex après corrections mineures).
+Plan : `docs/tasks/PLAN-T-64.md` (version 1.3, développement en cours).
 
-Périmètre (ADM-05, ADM-07, RG-EVT-01 à 04, RG-PAR-01 à 07, RG-ENTR-03, RG-IMP-06 et 07, ENT-01, APP-00, APP-01, décisions du 23/11) :
-- **événements** : un seul par année scolaire, nom terminé automatiquement par l'année (ex. 2026/2027), création, modification, événement courant unique, statut calculé (Africa/Casablanca), archivage, désarchivage, suppression ;
-- **apprenants** : inscription automatique des actifs (désignation, création, import, réactivation, restauration) ; un apprenant **retiré reste retiré** jusqu'à « Réinscrire » ;
-- **entreprises** : événement **obligatoire** à la création, ajout en masse avec rapport, retrait si aucun passage ;
-- **emplacements** (étage, table), facultatifs : administrateur et CME ;
-- **affichage** : fiche de connexion, accueil entreprise (**événement courant uniquement**) et « Ma journée » (événement, emplacement, entreprises présentes).
+Périmètre (ADM-04 « Import des entreprises », RG-ENTR-01 à 07, RG-PAR-01 et 07, décision du 25/11) :
+- lecture du **classeur de suivi de l'équipe CME tel quel** : feuille « Entreprises Invitées », lignes « Confirmation par mail » = « Oui », **nom seul** ;
+- aperçu (à créer, déjà existantes, doublons, rejetées, non confirmées), confirmation, traitement en arrière-plan, rapport, historique ;
+- comptes créés et affectés à l'événement choisi ; **fiches de connexion imprimables en une fois**, mots de passe chiffrés jusqu'à leur suppression ;
+- aucune autre colonne lue ni enregistrée ; aucun e-mail.
 
-Reporté : programme (**T-15**) ; reprise des anciennes entreprises (**T-16**) ; import des entreprises par fichier (tâche à créer) ; passages et compteurs (**T-30**, **T-33**) ; recherche d'apprenants (**T-23**) ; CV et suggestions (**T-20**, **T-40**).
+Reporté : feuille « Informations entreprises Appli » ; mise à jour des entreprises existantes ; reprise de l'ancienne application (T-16, abandonnée).
 
-Données de test : **fictives uniquement**.
+Données de test : **classeurs fictifs uniquement** (aucun fichier réel du dossier Téléchargements).
 
 Contrôles locaux (MySQL Docker démarré) :
 

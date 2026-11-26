@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\PasswordLinkRequestController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\CompanyImportController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventParticipantController;
 use App\Http\Controllers\LearnerController;
@@ -95,6 +96,19 @@ Route::middleware(['auth:sanctum', 'session.valid'])->group(function () {
             ->middleware('no.store')->name('companies.reset-password');
         Route::post('/companies/{id}/credentials-printed', [CompanyController::class, 'credentialsPrinted'])->whereNumber('id')
             ->name('companies.credentials-printed');
+
+        // Import des entreprises (ADM-04, T-64) : administrateur.
+        Route::get('/company-imports/expected', [CompanyImportController::class, 'expected'])->name('company-imports.expected');
+        Route::post('/company-imports/preview', [CompanyImportController::class, 'preview'])->name('company-imports.preview');
+        Route::post('/company-imports', [CompanyImportController::class, 'store'])->name('company-imports.store');
+        Route::get('/company-imports', [CompanyImportController::class, 'index'])->name('company-imports.index');
+        Route::get('/company-imports/{id}', [CompanyImportController::class, 'show'])->whereNumber('id')->name('company-imports.show');
+        Route::get('/company-imports/{id}/credentials', [CompanyImportController::class, 'credentials'])->whereNumber('id')
+            ->middleware('no.store')->name('company-imports.credentials');
+        Route::post('/company-imports/{id}/credentials-printed', [CompanyImportController::class, 'credentialsPrinted'])->whereNumber('id')
+            ->name('company-imports.credentials-printed');
+        Route::delete('/company-imports/{id}/credentials', [CompanyImportController::class, 'destroyCredentials'])->whereNumber('id')
+            ->name('company-imports.credentials.destroy');
     });
 
     // Événements (ADM-05, T-14) : administrateur.
