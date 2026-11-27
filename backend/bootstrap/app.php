@@ -2,11 +2,13 @@
 
 use App\Http\Middleware\EnsureSessionIsValid;
 use App\Http\Middleware\NoStore;
+use App\Services\Cv\CvService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -69,6 +71,17 @@ return Application::configure(basePath: dirname(__DIR__))
                 'message' => 'La page a expiré. Veuillez réessayer.',
                 'code' => 'csrf_token_mismatch',
             ], 419)
+            : null);
+
+        // Corps de requête au-delà de `post_max_size` (plan T-20 v1.2, § 4, cas 3) : message du CV pour
+        // l'envoi d'un CV SEULEMENT (méthode et chemin : la route peut ne pas être résolue) ; les autres
+        // routes (imports, logos) gardent la réponse 413 par défaut.
+        $exceptions->render(fn (PostTooLargeException $e, Request $request) => $request->isMethod('POST')
+            && preg_match('#^api/v1/learners/\d+/cv$#', $request->path()) === 1
+            ? response()->json([
+                'message' => CvService::INVALID_MESSAGE,
+                'errors' => ['file' => [CvService::INVALID_MESSAGE]],
+            ], 422)
             : null);
 
         $exceptions->render(fn (NotFoundHttpException $e, Request $request) => $request->is('api/*')

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\CompanyImport;
 use App\Models\LearnerImport;
+use App\Services\Cv\CvStorage;
 use App\Services\Imports\CompanyImportRunner;
 use App\Services\Imports\LearnerImportRunner;
 use App\Support\PrivateTemp;
@@ -12,7 +13,8 @@ use Illuminate\Console\Command;
 /**
  * Toutes les 5 minutes (plan T-13 v2.1) : imports abandonnés passés en échec (« en attente » depuis
  * plus de 20 minutes après la confirmation, « en cours » depuis plus de 20 minutes après leur
- * démarrage), `payload` effacé ; dossiers temporaires privés de plus de 55 minutes supprimés.
+ * démarrage), `payload` effacé ; dossiers temporaires privés de plus de 55 minutes supprimés ;
+ * fichiers de CV non référencés depuis plus d'une heure supprimés (T-20).
  */
 class CleanupImports extends Command
 {
@@ -22,7 +24,7 @@ class CleanupImports extends Command
 
     public const STALE_MINUTES = 20;
 
-    public function handle(LearnerImportRunner $runner, CompanyImportRunner $companies): int
+    public function handle(LearnerImportRunner $runner, CompanyImportRunner $companies, CvStorage $cvs): int
     {
         $limit = now()->subMinutes(self::STALE_MINUTES);
         // Même condition pour la sélection ET pour la mise à jour atomique : un import pris en charge
@@ -46,9 +48,11 @@ class CleanupImports extends Command
             $companies->markFailed((int) $id, CompanyImportRunner::ABANDONED_ERROR, $staleCompanies);
         }
         $folders = PrivateTemp::sweep();
+        // Fichiers de CV non référencés depuis plus d'une heure (T-20, plan v1.2 § 5).
+        $orphans = $cvs->sweepOrphans();
 
         $count = $ids->count() + $companyIds->count();
-        $this->info("Imports abandonnés : {$count} ; dossiers temporaires supprimés : {$folders}.");
+        $this->info("Imports abandonnés : {$count} ; dossiers temporaires supprimés : {$folders} ; fichiers de CV orphelins supprimés : {$orphans}.");
 
         return self::SUCCESS;
     }

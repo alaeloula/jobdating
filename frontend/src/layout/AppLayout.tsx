@@ -11,6 +11,7 @@ const REFERENTIALS_MANAGE = 'referentials.manage'
 const USERS_MANAGE = 'users.manage'
 const LEARNERS_VIEW = 'learners.view'
 const LEARNERS_IMPORT = 'learners.import'
+const CV_UPLOAD = 'cv.upload'
 const COMPANIES_PERMISSIONS = ['companies.manage', 'companies.profiles.manage']
 const EVENTS_MANAGE = 'events.manage'
 const LOCATIONS_MANAGE = 'locations.manage'
@@ -47,6 +48,7 @@ function navItems(user: CurrentUser): NavItem[] {
   if (COMPANIES_PERMISSIONS.some(can)) items.push({ to: '/entreprises', label: 'Entreprises participantes' })
   if (can(LOCATIONS_MANAGE)) items.push({ to: '/emplacements', label: 'Emplacements des entreprises' })
   if (can(LEARNERS_VIEW)) items.push({ to: '/apprenants', label: 'Apprenants', end: true })
+  if (can(CV_UPLOAD)) items.push({ to: '/cv', label: 'CV des apprenants' })
   if (can(LEARNERS_IMPORT)) items.push({ to: '/apprenants/import', label: 'Import des apprenants' })
   if (can(USERS_MANAGE)) items.push({ to: '/comptes', label: 'Comptes CME et Direction' })
   if (can(REFERENTIALS_MANAGE)) items.push({ to: '/referentiels', label: 'Référentiels' })

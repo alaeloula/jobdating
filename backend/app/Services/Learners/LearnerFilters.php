@@ -26,10 +26,22 @@ final class LearnerFilters
 {
     public const STATUSES = ['actif', 'desactive', 'supprime'];
 
+    /** Filtre CV (T-20) : avec ou sans CV courant. */
+    public const CV_STATES = ['with', 'without'];
+
     /**
-     * @param  array{search?: string|null, status?: string|null, campus_id?: int|null, promotion_id?: int|null, class_id?: int|null, filiere_id?: int|null, competence_id?: int|null}  $filters
+     * @param  array{search?: string|null, status?: string|null, cv?: string|null, campus_id?: int|null, promotion_id?: int|null, class_id?: int|null, filiere_id?: int|null, competence_id?: int|null}  $filters
      */
     public function __construct(public readonly array $filters, private readonly User $viewer) {}
+
+    /** Mêmes filtres sans le filtre CV (compteur « Sans CV », T-20). */
+    public function withoutCv(): self
+    {
+        $filters = $this->filters;
+        unset($filters['cv']);
+
+        return new self($filters, $this->viewer);
+    }
 
     public function isAdmin(): bool
     {
@@ -98,6 +110,11 @@ final class LearnerFilters
         if (isset($this->filters['filiere_id'])) {
             $query->whereIn('learners.class_id', SchoolClass::query()->select('id')->where('filiere_id', (int) $this->filters['filiere_id']));
         }
+        match ($this->filters['cv'] ?? null) {
+            'with' => $query->whereHas('cv'),
+            'without' => $query->whereDoesntHave('cv'),
+            default => null,
+        };
         if (isset($this->filters['competence_id'])) {
             $query->whereExists(fn ($q) => $q->selectRaw('1')->from('learner_competence')
                 ->whereColumn('learner_competence.learner_id', 'learners.id')
@@ -123,6 +140,9 @@ final class LearnerFilters
                 'desactive' => 'Désactivés',
                 default => 'Supprimés',
             };
+        }
+        if (isset($this->filters['cv'])) {
+            $labels['cv'] = $this->filters['cv'] === 'with' ? 'Avec CV' : 'Sans CV';
         }
         $models = [
             'campus' => [Campus::class, 'campus_id'],

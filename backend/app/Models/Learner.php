@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Fiche apprenant (ADM-03). Le compte de connexion est `user` (rôle apprenant). La filière est
@@ -68,6 +69,16 @@ class Learner extends Model implements HasAuditLabel
     public function schoolClass(): BelongsTo
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    /**
+     * CV courant (T-20) : un seul par apprenant.
+     *
+     * @return HasOne<CvDocument, $this>
+     */
+    public function cv(): HasOne
+    {
+        return $this->hasOne(CvDocument::class);
     }
 
     /** @return BelongsToMany<Competence, $this> */

@@ -29,6 +29,16 @@ export interface Learner {
   cme_learner_id?: string | null
   /** État dans l'événement courant (T-14), administrateur seulement, dans la liste. */
   event_status?: 'inscrit' | 'retire' | 'non_inscrit'
+  /** État du CV (T-20) : null si aucun CV ; absent si le compte n'a pas `cv.view`. */
+  cv?: CvState | null
+}
+
+/** CV courant d'un apprenant (T-20) : jamais le chemin ni l'empreinte. */
+export interface CvState {
+  source: 'televerse' | 'plateforme_cme'
+  added_at: string
+  added_by_name: string | null
+  size: number
 }
 
 export interface LearnerFilters {
@@ -39,6 +49,8 @@ export interface LearnerFilters {
   class_id: string
   filiere_id: string
   competence_id: string
+  /** Filtre CV (T-20) : avec ou sans CV courant. */
+  cv?: '' | 'with' | 'without'
 }
 
 export const EMPTY_FILTERS: LearnerFilters = {
@@ -55,6 +67,8 @@ interface Paginated {
   data: Learner[]
   meta: { current_page: number; last_page: number; total: number }
   current_event?: { id: number; name: string } | null
+  /** Compteur « Sans CV (n) » (T-20) : mêmes filtres, sans le filtre CV. */
+  counts?: { without_cv: number }
 }
 
 /** Filtres envoyés au serveur : valeurs vides retirées, identifiants en nombres. */
@@ -62,6 +76,7 @@ export function filtersBody(filters: LearnerFilters): Record<string, string | nu
   const body: Record<string, string | number> = {}
   if (filters.search.trim()) body.search = filters.search.trim()
   if (filters.status) body.status = filters.status
+  if (filters.cv) body.cv = filters.cv
   for (const key of ['campus_id', 'promotion_id', 'class_id', 'filiere_id', 'competence_id'] as const) {
     if (filters[key]) body[key] = Number(filters[key])
   }
