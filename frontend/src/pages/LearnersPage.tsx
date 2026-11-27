@@ -3,6 +3,10 @@ import { useMe } from '../auth/queries'
 import { reinstateLearner, removeLearner } from '../events/api'
 import { ApiError } from '../lib/api'
 import { useReferentialOptions, type ReferentialOption } from '../referentials/api'
+import CvActions from '../cv/CvActions'
+import CvHistoryPanel from '../cv/CvHistoryPanel'
+import { CV_HISTORY, CV_UPLOAD, cvLabel } from '../cv/api'
+import { useCvOperations } from '../cv/useCvOperations'
 import CompetencesPanel from '../learners/CompetencesPanel'
 import LearnerForm from '../learners/LearnerForm'
 import {
@@ -26,7 +30,7 @@ const VIEW_CNIE = 'learners.view_cnie'
 const COMPETENCES_MANAGE = 'learners.competences.manage'
 const PARTICIPANTS_MANAGE = 'participants.manage'
 
-type Panel = { kind: 'new' } | { kind: 'edit'; learner: Learner } | { kind: 'competences'; learner: Learner } | null
+type Panel = { kind: 'new' } | { kind: 'edit'; learner: Learner } | { kind: 'competences'; learner: Learner } | { kind: 'cv'; learner: Learner } | null
 
 interface Bulk {
   action: BulkAction
@@ -51,6 +55,9 @@ export default function LearnersPage() {
   const canSelect = canManage || canCompetences
   const canSeeCnie = me?.permissions.includes(VIEW_CNIE) ?? false
   const canParticipants = me?.permissions.includes(PARTICIPANTS_MANAGE) ?? false
+  const canCvUpload = me?.permissions.includes(CV_UPLOAD) ?? false
+  const canCvHistory = me?.permissions.includes(CV_HISTORY) ?? false
+  const cvOps = useCvOperations()
   const [eventBusy, setEventBusy] = useState<number | null>(null)
 
   const [filters, setFilters] = useState<LearnerFilters>(EMPTY_FILTERS)
@@ -86,18 +93,23 @@ export default function LearnersPage() {
   const selectedCount = wholeFilter ? wholeFilter.total : checked.length
 
   /** Toute modification de recherche, de filtre ou de page vide la sélection (plan T-12 v2, §5). */
+  // Le panneau « CV » suit une ligne de la liste : il se ferme quand la liste change, pour ne jamais
+  // afficher un état figé d'un apprenant sorti de la page (revue Codex T-20, constat 3).
+  const closeCvPanel = () => setPanel((p) => (p?.kind === 'cv' ? null : p))
   const changeFilters = (next: Partial<LearnerFilters>) => {
     setFilters((f) => ({ ...f, ...next }))
     setPage(1)
     setChecked([])
     setWholeFilter(null)
     closeBulk()
+    closeCvPanel()
   }
   const changePage = (next: number) => {
     setPage(next)
     setChecked([])
     setWholeFilter(null)
     closeBulk()
+    closeCvPanel()
   }
 
   const say = (text: string) => {
@@ -390,20 +402,21 @@ export default function LearnersPage() {
                   <th className="px-4 py-3">Classe</th>
                   <th className="px-4 py-3">Promotion</th>
                   <th className="px-4 py-3">Statut</th>
-                  {(canManage || canCompetences) && <th className="px-4 py-3">Actions</th>}
+                  <th className="px-4 py-3">CV</th>
+                  {(canManage || canCompetences || canCvUpload) && <th className="px-4 py-3">Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {list.isLoading && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-6 text-slate-600">
+                    <td colSpan={9} className="px-4 py-6 text-slate-600">
                       Chargement…
                     </td>
                   </tr>
                 )}
                 {list.isError && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-6">
+                    <td colSpan={9} className="px-4 py-6">
                       <p role="alert" className="text-red-800">
                         {list.error instanceof ApiError ? list.error.message : 'La liste n’a pas pu être chargée.'}
                       </p>
@@ -415,7 +428,7 @@ export default function LearnersPage() {
                 )}
                 {!list.isLoading && !list.isError && rows.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-6 text-slate-600">
+                    <td colSpan={9} className="px-4 py-6 text-slate-600">
                       Aucun apprenant.
                     </td>
                   </tr>
@@ -459,7 +472,8 @@ export default function LearnersPage() {
                       {STATUS_LABEL[l.status]}
                       {l.event_status && <p className="text-xs text-slate-600">{EVENT_STATUS_LABEL[l.event_status]}</p>}
                     </td>
-                    {(canManage || canCompetences) && (
+                    <td className={`px-4 py-3 ${l.cv ? 'text-teal-800' : 'text-amber-800'}`}>{cvLabel(l.cv)}</td>
+                    {(canManage || canCompetences || canCvUpload) && (
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap justify-end gap-2">
                           {canManage && l.status !== 'supprime' && (
@@ -504,6 +518,11 @@ export default function LearnersPage() {
                           {canCompetences && l.status !== 'supprime' && (
                             <button type="button" className={button} onClick={() => openPanel({ kind: 'competences', learner: l })}>
                               Compétences
+                            </button>
+                          )}
+                          {canCvUpload && l.status !== 'supprime' && (
+                            <button type="button" className={button} onClick={() => openPanel({ kind: 'cv', learner: l })}>
+                              CV
                             </button>
                           )}
                         </div>
@@ -554,6 +573,17 @@ export default function LearnersPage() {
           />
         )}
         {panel?.kind === 'competences' && <CompetencesPanel key={panel.learner.id} learner={panel.learner} onClose={() => setPanel(null)} />}
+        {panel?.kind === 'cv' && (
+          <div key={panel.learner.id} className="space-y-3">
+            <section aria-label={`CV de ${panel.learner.first_name} ${panel.learner.last_name}`} className="space-y-2 rounded-2xl border border-slate-200 bg-white p-5">
+              <h2 className="font-bold">CV · {panel.learner.first_name} {panel.learner.last_name}</h2>
+              {/* État relu dans la liste à jour : le panneau suit l'apprenant, pas une copie figée. */}
+              <p className="text-sm">{cvLabel((rows.find((r) => r.id === panel.learner.id) ?? panel.learner).cv)}</p>
+              <CvActions learner={rows.find((r) => r.id === panel.learner.id) ?? panel.learner} ops={cvOps} canUpload={canCvUpload} />
+            </section>
+            {canCvHistory && <CvHistoryPanel learner={panel.learner} onClose={() => setPanel(null)} />}
+          </div>
+        )}
       </div>
     </div>
   )

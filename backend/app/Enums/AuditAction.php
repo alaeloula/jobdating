@@ -53,6 +53,10 @@ enum AuditAction: string
     case CompanyImportCredentialsPrinted = 'company_import.credentials_printed';
     case CompanyImportCredentialsDeleted = 'company_import.credentials_deleted';
 
+    case CvUploaded = 'cv.uploaded';
+    case CvReplaced = 'cv.replaced';
+    case CvRemoved = 'cv.removed';
+
     case EventCreated = 'event.created';
     case EventUpdated = 'event.updated';
     case EventCurrentSet = 'event.current_set';
@@ -90,6 +94,7 @@ enum AuditAction: string
             self::CompanyImportConfirmed, self::CompanyImportCompleted, self::CompanyImportFailed,
             self::CompanyImportCredentialsViewed, self::CompanyImportCredentialsPrinted,
             self::CompanyImportCredentialsDeleted => AuditCategory::ImportsExports,
+            self::CvUploaded, self::CvReplaced, self::CvRemoved => AuditCategory::Cv,
             self::EventCreated, self::EventUpdated, self::EventCurrentSet, self::EventCurrentUnset,
             self::EventArchived, self::EventUnarchived, self::EventDeleted, self::EventCompanyAdded,
             self::EventCompanyRemoved, self::EventCompanyLocationUpdated, self::EventLearnerRemoved,
@@ -140,6 +145,9 @@ enum AuditAction: string
             self::CompanyImportCredentialsViewed => 'Fiches de connexion de l’import affichées',
             self::CompanyImportCredentialsPrinted => 'Fiches de connexion de l’import imprimées',
             self::CompanyImportCredentialsDeleted => 'Mots de passe de l’import supprimés',
+            self::CvUploaded => 'CV téléversé',
+            self::CvReplaced => 'CV remplacé',
+            self::CvRemoved => 'CV retiré',
             self::EventCreated => 'Événement créé',
             self::EventUpdated => 'Événement modifié',
             self::EventCurrentSet => 'Événement désigné comme courant',

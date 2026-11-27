@@ -167,7 +167,7 @@ Le schéma complet est en CDC 8.2. Ordre des migrations (respecte les clés étr
 2. Comptes : `users`, tables Spatie Permission, `companies`, `learners`
 3. Événements : `events`, `event_program_items`, `event_companies`, `event_learners`
 4. Activité : `passages`, `evaluations`, `evaluation_opportunities`, `evaluation_tags`
-5. CV : `cv_documents`, `cv_import_logs`, `cv_access_logs`
+5. CV : `cv_documents`, `cv_history` (historique des ajouts, retraits et résultats d'import, plan T-20 décision 8 : remplace `cv_import_logs`), `cv_access_logs`
 6. Transverse : `notifications`, `audit_logs`, `export_logs`, `imports`
 7. Techniques Laravel : `sessions`, `jobs`, `failed_jobs`, `cache`
 

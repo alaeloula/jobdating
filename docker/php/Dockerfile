@@ -2,6 +2,7 @@
 # Même version et mêmes extensions que la CI (.github/workflows : mbstring, pdo_mysql, intl, zip).
 # Ne sert pas en production.
 # pcntl : délai des tâches de file appliqué par le worker (imports d'apprenants, T-13).
+# upload_max_filesize 6M : CV de 5 Mo au plus (T-20, DECISIONS 26/11) ; à reporter sur le serveur (ARCH-01).
 FROM php:8.4-cli
 
 RUN apt-get update \
@@ -21,6 +22,8 @@ RUN docker-php-ext-enable opcache \
         echo 'realpath_cache_size=4096K'; \
         echo 'realpath_cache_ttl=600'; \
         echo 'memory_limit=1G'; \
+        echo 'upload_max_filesize=6M'; \
+        echo 'post_max_size=8M'; \
     } > /usr/local/etc/php/conf.d/jobdating.ini
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

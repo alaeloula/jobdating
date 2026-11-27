@@ -28,7 +28,7 @@ enum AuditCategory: string
             self::Connexions => 'Connexions',
             self::Comptes => 'Comptes et mots de passe',
             self::Passages => 'Passages et évaluations',
-            self::Cv => 'Consultations de CV',
+            self::Cv => 'CV : ajouts, retraits et consultations',
             self::Cnie => 'Consultations de CNIE',
             self::ImportsExports => 'Imports et exports',
             self::Referentiels => 'Référentiels',

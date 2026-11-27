@@ -12,6 +12,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import HomePage from './pages/HomePage'
 import LearnerDayPage from './pages/LearnerDayPage'
 import LearnerImportPage from './pages/LearnerImportPage'
+import CvPage from './pages/CvPage'
 import LearnersPage from './pages/LearnersPage'
 import LocationsPage from './pages/LocationsPage'
 import LoginPage from './pages/LoginPage'
@@ -68,6 +69,7 @@ export default function AppRoutes() {
               <Route path="/referentiels" element={<ReferentialsPage />} />
               <Route path="/entreprises" element={<CompaniesPage />} />
               <Route path="/emplacements" element={<LocationsPage />} />
+              <Route path="/cv" element={<CvPage />} />
             </Route>
             <Route element={<RequireAuth roles={['entreprise']} />}>
               <Route path="/entreprise" element={<CompanyHomePage />} />

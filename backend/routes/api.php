@@ -14,6 +14,7 @@ use App\Http\Controllers\Auth\PasswordLinkRequestController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyImportController;
+use App\Http\Controllers\CvController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventParticipantController;
 use App\Http\Controllers\LearnerController;
@@ -167,6 +168,14 @@ Route::middleware(['auth:sanctum', 'session.valid'])->group(function () {
             Route::post('/learners/{id}/restore', [LearnerController::class, 'restore'])->whereNumber('id')->name('learners.restore');
             Route::post('/learners/bulk-deactivate', [LearnerController::class, 'bulkDeactivate'])->name('learners.bulk-deactivate');
         });
+
+        // CV (CV-01, CV-04, T-20) : administrateur et CME. La Direction voit l'état dans la fiche, sans action.
+        Route::middleware('permission:'.Permission::CvUpload->value)->group(function () {
+            Route::post('/learners/{id}/cv', [CvController::class, 'upload'])->whereNumber('id')->name('learners.cv.upload');
+            Route::delete('/learners/{id}/cv', [CvController::class, 'remove'])->whereNumber('id')->name('learners.cv.remove');
+        });
+        Route::get('/learners/{id}/cv/history', [CvController::class, 'history'])->whereNumber('id')
+            ->middleware('permission:'.Permission::CvHistory->value)->name('learners.cv.history');
     });
 
     // Import des apprenants (ADM-04, T-13) : permission `learners.import` seule (décision 13 du 20/11).

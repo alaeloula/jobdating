@@ -4,6 +4,8 @@ namespace App\Http\Resources;
 
 use App\Enums\Permission;
 use App\Enums\Role;
+use App\Http\Controllers\CvController;
+use App\Models\CvDocument;
 use App\Models\Learner;
 use App\Models\Referentials\Competence;
 use App\Models\Referentials\ReferentialModel;
@@ -53,6 +55,13 @@ class LearnerResource extends JsonResource
                 default => 'actif',
             },
         ];
+
+        // État du CV (ADM-03, T-20) : présent ou absent, source, date, auteur ; jamais le chemin ni l'empreinte.
+        if ($viewer?->can(Permission::CvView->value) === true) {
+            /** @var CvDocument|null $cv */
+            $cv = $learner->relationLoaded('cv') ? $learner->getRelation('cv') : $learner->cv()->first();
+            $data['cv'] = $cv === null ? null : CvController::state($cv);
+        }
 
         if ($viewer?->can(Permission::LearnersViewCnie->value) === true) {
             $data['cnie'] = $learner->cnie;

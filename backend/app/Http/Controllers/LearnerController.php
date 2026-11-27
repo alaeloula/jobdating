@@ -29,7 +29,7 @@ class LearnerController extends Controller
 {
     private const PER_PAGE = 25;
 
-    private const RELATIONS = ['user', 'campus', 'promotion', 'schoolClass.filiere', 'competences'];
+    private const RELATIONS = ['user', 'campus', 'promotion', 'schoolClass.filiere', 'competences', 'cv'];
 
     public function __construct(private readonly LearnerService $learners) {}
 
@@ -42,9 +42,11 @@ class LearnerController extends Controller
         $page = $filters->query()->with(self::RELATIONS)
             ->orderBy('users.last_name')->orderBy('users.first_name')->orderBy('learners.id')
             ->paginate(self::PER_PAGE, page: (int) $request->input('page', 1));
+        // Compteur « Sans CV (n) » (T-20, maquette cme-01) : mêmes filtres et droits, sans le filtre CV.
+        $withoutCv = ['without_cv' => $filters->withoutCv()->query()->whereDoesntHave('cv')->count()];
 
         if (! $this->isAdmin($request)) {
-            return LearnerResource::collection($page);
+            return LearnerResource::collection($page)->additional(['counts' => $withoutCv]);
         }
 
         // État de chaque apprenant de la page dans l'événement courant (T-14), calculé AVANT de créer
@@ -63,7 +65,10 @@ class LearnerController extends Controller
             });
         }
 
-        return LearnerResource::collection($page)->additional(['current_event' => $event === null ? null : ['id' => $event->id, 'name' => $event->fullName()]]);
+        return LearnerResource::collection($page)->additional([
+            'current_event' => $event === null ? null : ['id' => $event->id, 'name' => $event->fullName()],
+            'counts' => $withoutCv,
+        ]);
     }
 
     public function show(Request $request, int $id): LearnerResource
@@ -224,7 +229,7 @@ class LearnerController extends Controller
     private function filters(Request $request, array $values): LearnerFilters
     {
         $clean = [];
-        foreach (['search', 'status'] as $key) {
+        foreach (['search', 'status', 'cv'] as $key) {
             if (isset($values[$key]) && $values[$key] !== '') {
                 $clean[$key] = (string) $values[$key];
             }
@@ -235,7 +240,7 @@ class LearnerController extends Controller
             }
         }
 
-        /** @var array{search?: string, status?: string, campus_id?: int, promotion_id?: int, class_id?: int, filiere_id?: int, competence_id?: int} $clean */
+        /** @var array{search?: string, status?: string, cv?: string, campus_id?: int, promotion_id?: int, class_id?: int, filiere_id?: int, competence_id?: int} $clean */
         return new LearnerFilters($clean, $this->actor($request));
     }
 
@@ -254,6 +259,7 @@ class LearnerController extends Controller
             $prefix.'class_id' => ['nullable', 'integer'],
             $prefix.'filiere_id' => ['nullable', 'integer'],
             $prefix.'competence_id' => ['nullable', 'integer'],
+            $prefix.'cv' => ['nullable', Rule::in(LearnerFilters::CV_STATES)],
         ];
     }
 
