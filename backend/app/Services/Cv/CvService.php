@@ -14,6 +14,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use LogicException;
 use RuntimeException;
@@ -91,6 +92,8 @@ class CvService
                     'size' => $size,
                     'mime' => 'application/pdf',
                     'cme_reference' => null,
+                    // Nouvelle version à chaque ajout ou remplacement effectif (plan T-21, décision 9).
+                    'version' => (string) Str::uuid(),
                 ];
                 if ($current !== null) {
                     $oldPath = $current->path;

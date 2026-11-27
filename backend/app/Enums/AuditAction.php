@@ -56,6 +56,8 @@ enum AuditAction: string
     case CvUploaded = 'cv.uploaded';
     case CvReplaced = 'cv.replaced';
     case CvRemoved = 'cv.removed';
+    case CvViewed = 'cv.viewed';
+    case CvDownloaded = 'cv.downloaded';
 
     case EventCreated = 'event.created';
     case EventUpdated = 'event.updated';
@@ -94,7 +96,7 @@ enum AuditAction: string
             self::CompanyImportConfirmed, self::CompanyImportCompleted, self::CompanyImportFailed,
             self::CompanyImportCredentialsViewed, self::CompanyImportCredentialsPrinted,
             self::CompanyImportCredentialsDeleted => AuditCategory::ImportsExports,
-            self::CvUploaded, self::CvReplaced, self::CvRemoved => AuditCategory::Cv,
+            self::CvUploaded, self::CvReplaced, self::CvRemoved, self::CvViewed, self::CvDownloaded => AuditCategory::Cv,
             self::EventCreated, self::EventUpdated, self::EventCurrentSet, self::EventCurrentUnset,
             self::EventArchived, self::EventUnarchived, self::EventDeleted, self::EventCompanyAdded,
             self::EventCompanyRemoved, self::EventCompanyLocationUpdated, self::EventLearnerRemoved,
@@ -148,6 +150,8 @@ enum AuditAction: string
             self::CvUploaded => 'CV téléversé',
             self::CvReplaced => 'CV remplacé',
             self::CvRemoved => 'CV retiré',
+            self::CvViewed => 'CV consulté',
+            self::CvDownloaded => 'CV téléchargé',
             self::EventCreated => 'Événement créé',
             self::EventUpdated => 'Événement modifié',
             self::EventCurrentSet => 'Événement désigné comme courant',

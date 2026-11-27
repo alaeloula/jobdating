@@ -68,7 +68,7 @@ describe('Navigation par rôle', () => {
     ['cme', ['Tableau de bord', 'Entreprises participantes', 'Apprenants', 'Référentiels']],
     ['direction', ['Tableau de bord', 'Apprenants']],
     ['entreprise', ['Accueil', 'Profil entreprise']],
-    ['apprenant', ['Ma journée']],
+    ['apprenant', ['Ma journée', 'Mon CV']],
   ] as [RoleName, string[]][])('%s : liens dans l’ordre des maquettes, écrans existants seulement', async (role, expected) => {
     renderAs(role)
     expect(await navLinks()).toEqual(expected)

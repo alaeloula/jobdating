@@ -21,6 +21,7 @@ use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use PDOException;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use RuntimeException;
@@ -147,6 +148,7 @@ class CvConcurrencyTest extends TestCase
         User::withTrashed()->whereKey($this->learner->user_id)->lockForUpdate()->firstOrFail();
         CvDocument::query()->forceCreate([
             'learner_id' => $this->learner->id, 'source' => CvDocument::SOURCE_UPLOAD, 'added_at' => now(),
+            'version' => (string) Str::uuid(),
             'path' => $path, 'sha256' => hash('sha256', 'x'), 'size' => 1, 'mime' => 'application/pdf',
         ]);
         $this->release($child);

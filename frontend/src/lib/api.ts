@@ -19,6 +19,11 @@ function emit(event: ApiEvent): void {
   listeners.forEach((listener) => listener(event))
 }
 
+/** Fin de session détectée hors de `apiRequest` (ex. fichier du CV, T-21) : même traitement global. */
+export function notifyUnauthorized(): void {
+  emit('unauthorized')
+}
+
 export class ApiError extends Error {
   readonly status: number
   readonly code: string | undefined

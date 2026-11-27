@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $added_at
  * @property string $path
  * @property string $sha256
+ * @property string $version
  * @property int $size
  * @property string $mime
  * @property string|null $cme_reference

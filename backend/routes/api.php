@@ -14,6 +14,7 @@ use App\Http\Controllers\Auth\PasswordLinkRequestController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyImportController;
+use App\Http\Controllers\CvConsultationController;
 use App\Http\Controllers\CvController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventParticipantController;
@@ -145,6 +146,15 @@ Route::middleware(['auth:sanctum', 'session.valid'])->group(function () {
     Route::get('/me/company-event', [MyEventController::class, 'company'])->name('me.company-event');
     Route::get('/me/learner-event', [MyEventController::class, 'learner'])->name('me.learner-event');
 
+    // « Mon CV » de l'apprenant (APP-03, T-21) : état et lien de SON CV seulement.
+    Route::middleware(['role:apprenant', 'permission:'.Permission::CvView->value])->group(function () {
+        Route::get('/me/cv', [CvConsultationController::class, 'mine'])->name('me.cv');
+        Route::post('/me/cv/link', [CvConsultationController::class, 'mineLink'])->middleware('no.store')->name('me.cv.link');
+    });
+
+    // Fichier du CV par lien signé (T-21) : session obligatoire, compte et version du lien, droits relus.
+    Route::get('/cv-files/{cv}', [CvConsultationController::class, 'file'])->whereNumber('cv')->name('cv.file');
+
     // Apprenants (ADM-03, T-12). Limités aux RÔLES administrateur, CME et Direction : l'entreprise
     // a `learners.view` pour T-23 (participants de ses événements) et n'accède jamais à ces routes.
     Route::middleware(['role:administrateur|cme|direction', 'permission:'.Permission::LearnersView->value])->group(function () {
@@ -176,6 +186,9 @@ Route::middleware(['auth:sanctum', 'session.valid'])->group(function () {
         });
         Route::get('/learners/{id}/cv/history', [CvController::class, 'history'])->whereNumber('id')
             ->middleware('permission:'.Permission::CvHistory->value)->name('learners.cv.history');
+        // Consultation (CV-03, T-21) : lien temporaire ; droits fins dans CvAccess (Direction comprise).
+        Route::post('/learners/{id}/cv/link', [CvConsultationController::class, 'link'])->whereNumber('id')
+            ->middleware(['permission:'.Permission::CvView->value, 'no.store'])->name('learners.cv.link');
     });
 
     // Import des apprenants (ADM-04, T-13) : permission `learners.import` seule (décision 13 du 20/11).
