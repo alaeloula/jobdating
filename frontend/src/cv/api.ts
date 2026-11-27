@@ -4,6 +4,7 @@ import type { CvState } from '../learners/api'
 
 export const CV_UPLOAD = 'cv.upload'
 export const CV_HISTORY = 'cv.history'
+export const CV_VIEW = 'cv.view'
 
 export type CvResult = 'created' | 'replaced' | 'unchanged'
 

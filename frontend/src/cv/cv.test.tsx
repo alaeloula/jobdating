@@ -22,7 +22,7 @@ function learner(id: number, cv: Learner['cv'] = null): Learner {
   }
 }
 
-const UPLOADED = { source: 'televerse' as const, added_at: '2026-11-26T10:00:00Z', added_by_name: 'Membre Fictif', size: 2048 }
+const UPLOADED = { version: '00000000-0000-4000-8000-00000000000a', source: 'televerse' as const, added_at: '2026-11-26T10:00:00Z', added_by_name: 'Membre Fictif', size: 2048 }
 
 function json(status: number, body?: unknown): Response {
   return new Response(body === undefined ? null : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })

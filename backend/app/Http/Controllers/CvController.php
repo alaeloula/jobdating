@@ -87,11 +87,14 @@ class CvController extends Controller
     /**
      * État du CV pour l'API (jamais le chemin ni l'empreinte).
      *
-     * @return array{source: string, added_at: string, added_by_name: string|null, size: int}
+     * La version (T-21) sert à repérer un remplacement ; ce n'est pas un droit d'accès.
+     *
+     * @return array{version: string, source: string, added_at: string, added_by_name: string|null, size: int}
      */
     public static function state(CvDocument $cv): array
     {
         return [
+            'version' => $cv->version,
             'source' => $cv->source,
             'added_at' => $cv->added_at->toIso8601String(),
             'added_by_name' => $cv->added_by_name,

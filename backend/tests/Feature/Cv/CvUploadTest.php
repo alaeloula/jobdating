@@ -139,7 +139,7 @@ class CvUploadTest extends TestCase
         $pdf = FakePdf::classic();
 
         $response = $this->send($this->admin, $learner, FakePdf::upload($pdf, 'Prenom1-Fictif-secret.pdf'))->assertCreated();
-        $this->assertSame(['source', 'added_at', 'added_by_name', 'size'], array_keys($response->json('data')));
+        $this->assertSame(['version', 'source', 'added_at', 'added_by_name', 'size'], array_keys($response->json('data')));
 
         $cv = CvDocument::query()->sole();
         $this->assertSame([$cv->path], $this->files());

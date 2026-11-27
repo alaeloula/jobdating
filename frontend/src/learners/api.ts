@@ -35,6 +35,8 @@ export interface Learner {
 
 /** CV courant d'un apprenant (T-20) : jamais le chemin ni l'empreinte. */
 export interface CvState {
+  /** Numéro de version (T-21) : repère un remplacement ; ce n'est pas un droit d'accès. */
+  version: string
   source: 'televerse' | 'plateforme_cme'
   added_at: string
   added_by_name: string | null

@@ -31,6 +31,17 @@ export function HomeIcon(props: IconProps) {
   )
 }
 
+/** Document (onglet « Mon CV », apprenant-04). */
+export function FileIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M14 3H6v18h12V7z" />
+      <path d="M14 3v4h4" />
+      <path d="M9 13h6M9 17h6" />
+    </Svg>
+  )
+}
+
 export function UserIcon(props: IconProps) {
   return (
     <Svg {...props}>

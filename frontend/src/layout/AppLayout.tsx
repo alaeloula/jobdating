@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { useLogout, useMe } from '../auth/queries'
 import type { CurrentUser, FlashLocationState, RoleName } from '../auth/types'
 import { CompanyEventCard } from '../pages/CompanyHomePage'
-import { CloseIcon, HomeIcon, LogoutIcon, MenuIcon, UserIcon } from './icons'
+import { CloseIcon, FileIcon, HomeIcon, LogoutIcon, MenuIcon, UserIcon } from './icons'
 
 /** Permissions des liens de navigation (CDC 3.2). Le serveur reste seul juge des droits. */
 const AUDIT_VIEW = 'audit.view'
@@ -40,7 +40,10 @@ function navItems(user: CurrentUser): NavItem[] {
     ]
   }
   if (user.role === 'apprenant') {
-    return [{ to: user.home, label: 'Ma journée', icon: HomeIcon, end: true }]
+    return [
+      { to: user.home, label: 'Ma journée', icon: HomeIcon, end: true },
+      { to: '/mon-cv', label: 'Mon CV', icon: FileIcon },
+    ]
   }
 
   const items: NavItem[] = [{ to: user.home, label: 'Tableau de bord', end: true }]

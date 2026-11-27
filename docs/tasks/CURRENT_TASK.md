@@ -1,36 +1,34 @@
-# Tâche courante – T-20 (JD-22) : téléversement et remplacement du CV
+# Tâche courante – T-21 (JD-23) : consultation du CV par lien temporaire, journalisée
 
-Branche : `feature/T-20-cv` (base `develop`, `2f8a9d8`).
+Branche : `feature/T-21-consultation-cv` (base `develop`, `eab9845`).
 
-Plan : `docs/tasks/PLAN-T-20.md` (version 1.2 : revue et contre-revue Codex traitées ; décisions 1 à 11).
+Plan : `docs/tasks/PLAN-T-21.md` (version 1.1 : revue Codex traitée ; décisions 1 à 10).
 
-## Périmètre proposé (CV-01, CV-04, RG-CV-05, RG-CV-06, RG-APR-03, CDC 7.2, 7.5, 7.6, 8.7, 11.6)
+## Périmètre (CV-03, RG-CV-01 à 03, APP-03, CDC 7.5, 7.6, 11.6, matrice 3.2)
 
-- **Téléverser ou remplacer** le CV d'un apprenant depuis sa fiche : administrateur et équipe CME seulement (permission `cv.upload`, contrôlée côté serveur) ;
-- **PDF uniquement**, type réel contrôlé (signature du fichier, pas seulement l'extension) et taille maximale ;
-- **un seul CV par apprenant** (`cv_documents.learner_id` unique) : le nouveau remplace l'ancien, dont le fichier est supprimé définitivement ;
-- **stockage privé, contenu chiffré** avec la clé de l'application (ARCHITECTURE 7) ; empreinte SHA-256 et taille enregistrées ;
-- **historique des ajouts (CV-04)** : apprenant, source (téléversé / plateforme CME), auteur, date, résultat ; consultable par l'administrateur et l'équipe CME (permission `cv.history`) ;
-- **état du CV sur la fiche** de l'apprenant (ADM-03) : présent ou absent, source, date et auteur de l'ajout ;
-- **retrait du CV** sans remplacement (DECISIONS 26/11) ;
-- journal d'audit de chaque ajout, remplacement ou retrait.
+- **Afficher le CV dans le site** (aperçu intégré, « Ouvrir en plein écran ») et **le télécharger** ;
+- **lien temporaire** de **15 minutes**, généré après contrôle des droits, lié au compte qui l'a demandé, valable pour la **version courante** seulement (RG-CV-01) ;
+- **journal** de chaque consultation et téléchargement dans le **journal d'audit** (catégorie « CV ») : utilisateur, apprenant, version, action, date, adresse IP ;
+- rôles : **administrateur, CME, Direction** (tous les apprenants visibles ; apprenant supprimé : administrateur seulement) et **apprenant** pour **son** CV (écran « Mon CV », maquette `apprenant-04`) ;
+- protection du document servi (suite de la décision 9 révisée de T-20) : en-têtes de sécurité, aucune mise en cache.
 
-## Hors périmètre (tâches suivantes)
+## Hors périmètre
 
-- consultation et téléchargement du PDF par lien temporaire, journal des consultations : **T-21** ;
-- import depuis la plateforme CME : **T-22** (la colonne `source` et l'historique sont prévus dès T-20) ;
-- écran « État de mon CV » de l'apprenant (APP-03, avec aperçu) et affichage côté entreprise : **T-21, T-23, T-24**.
+- **Entreprise** : accès au CV, périmètre RG-ENT-01 et fiche apprenant côté entreprise → **T-24** (réponse du 27/11) ;
+- import depuis la plateforme CME → T-22.
 
-## Points tranchés le 26/11
+## Points tranchés le 27/11
 
-1. **Taille maximale : 5 Mo** (DECISIONS 26/11).
-2. **« historique » = journal des ajouts** (CV-04) ; une seule version du fichier est conservée (CDC 8.7).
-3. **« Retirer le CV »** ajouté : administrateur et équipe CME, après confirmation, fichier supprimé définitivement, inscrit dans l'historique et le journal d'audit (DECISIONS 26/11).
-4. **Affichage** : état du CV (sans aperçu) sur la fiche admin/CME dans T-20 ; aperçu, lien temporaire et écran apprenant avec T-21.
+1. Le CV s'**affiche dans le site**, dessiné par **pdf.js** (dépendance `pdfjs-dist` acceptée le 27/11 après la revue du plan) : le contenu du PDF n'est jamais exécuté.
+2. Entreprise : **tout en T-24**.
+3. Journal : **journal d'audit** existant (écart de nom avec `cv_access_logs` du CDC 8, à signaler).
+4. Lien temporaire : **15 minutes**.
+5. Numéro de **version** renouvelé à chaque remplacement : un ancien lien ne remarche jamais.
+6. CV d'un apprenant **désactivé** : consultable par l'administrateur, la CME et la Direction.
 
 ## Données de test
 
-PDF **fictifs** générés par les tests ; aucun vrai CV dans le dépôt ni dans les tests automatiques. Exports fictifs (Word, LibreOffice, Canva, navigateur) fournis par le responsable technique dans `backend/tests/Fixtures/cv/`, sans aucune donnée réelle.
+PDF **fictifs** uniquement (`tests/Support/FakePdf.php`, `tests/Fixtures/cv/`).
 
 ## Contrôles locaux (MySQL Docker démarré ; une seule suite backend à la fois)
 

@@ -11,6 +11,7 @@ import EventsPage from './pages/EventsPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import HomePage from './pages/HomePage'
 import LearnerDayPage from './pages/LearnerDayPage'
+import MyCvPage from './pages/MyCvPage'
 import LearnerImportPage from './pages/LearnerImportPage'
 import CvPage from './pages/CvPage'
 import LearnersPage from './pages/LearnersPage'
@@ -76,6 +77,7 @@ export default function AppRoutes() {
             </Route>
             <Route element={<RequireAuth roles={['apprenant']} />}>
               <Route path="/ma-journee" element={<LearnerDayPage />} />
+              <Route path="/mon-cv" element={<MyCvPage />} />
             </Route>
           </Route>
         </Route>

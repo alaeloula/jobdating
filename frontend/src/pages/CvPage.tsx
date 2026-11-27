@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useMe } from '../auth/queries'
 import CvActions from '../cv/CvActions'
 import CvHistoryPanel from '../cv/CvHistoryPanel'
+import CvViewer from '../cv/CvViewer'
+import { cvFileName } from '../cv/pdf'
 import { CV_HISTORY, CV_UPLOAD, cvLabel } from '../cv/api'
 import { useCvOperations } from '../cv/useCvOperations'
 import { ApiError } from '../lib/api'
@@ -22,6 +24,8 @@ export default function CvPage() {
   const [filters, setFilters] = useState<LearnerFilters>({ ...EMPTY_FILTERS, cv: '' })
   const [page, setPage] = useState(1)
   const [history, setHistory] = useState<Learner | null>(null)
+  // CV affiché (T-21) : identifiant seulement ; la version vient de la ligne à jour de la liste.
+  const [viewing, setViewing] = useState<number | null>(null)
   const ops = useCvOperations()
 
   const list = useLearners(filters, page)
@@ -31,8 +35,10 @@ export default function CvPage() {
   const rows = list.data?.data ?? []
   const meta = list.data?.meta
   const withoutCv = list.data?.counts?.without_cv
+  const viewed = rows.find((r) => r.id === viewing)
 
   const change = (next: Partial<LearnerFilters>) => {
+    setViewing(null)
     setFilters((f) => ({ ...f, ...next }))
     setPage(1)
   }
@@ -132,6 +138,13 @@ export default function CvPage() {
                     <td className="px-4 py-3">{l.filiere.label}</td>
                     <td className={`px-4 py-3 font-semibold ${l.cv ? 'text-teal-800' : 'text-amber-800'}`}>{cvLabel(l.cv)}</td>
                     <td className="px-4 py-3">
+                      {l.cv && (
+                        <div className="mb-2 flex justify-end">
+                          <button type="button" className={button} aria-label={`Voir le CV de ${l.first_name} ${l.last_name}`} onClick={() => setViewing(l.id)}>
+                            Voir
+                          </button>
+                        </div>
+                      )}
                       <CvActions learner={l} ops={ops} canUpload={canUpload} onHistory={canHistory ? () => setHistory(l) : undefined} />
                     </td>
                   </tr>
@@ -153,7 +166,29 @@ export default function CvPage() {
             </nav>
           )}
         </section>
-        {history && <CvHistoryPanel key={history.id} learner={history} onClose={() => setHistory(null)} />}
+        <div className="space-y-4">
+          {viewed?.cv && (
+            <aside aria-label={`CV de ${viewed.first_name} ${viewed.last_name}`} className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="flex items-start justify-between gap-2">
+                <h2 className="font-bold">
+                  CV · {viewed.first_name} {viewed.last_name}
+                </h2>
+                <button type="button" className={button} onClick={() => setViewing(null)}>
+                  Fermer
+                </button>
+              </div>
+              <CvViewer
+                key={`${viewed.id}:${viewed.cv.version}`}
+                owner={viewed.id}
+                version={viewed.cv.version}
+                title={`${viewed.first_name} ${viewed.last_name}`}
+                fileName={cvFileName(viewed.first_name, viewed.last_name)}
+                onOutdated={() => void list.refetch()}
+              />
+            </aside>
+          )}
+          {history && <CvHistoryPanel key={history.id} learner={history} onClose={() => setHistory(null)} />}
+        </div>
       </div>
     </div>
   )
